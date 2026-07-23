@@ -112,13 +112,19 @@ describe('AudioEngine', () => {
 		expect(audioEl.src).toBe('');
 	});
 
-	it('should clamp seek position', () => {
+	it('should clamp seek position and handle track end', () => {
 		const audioEl = engine.getAudioElement() as unknown as MockAudio;
 		engine.duration = 100;
+
+		let trackEnded = false;
+		engine.onTrackEnd = () => {
+			trackEnded = true;
+		};
 
 		engine.seek(150);
 		expect(engine.currentPosition).toBe(100);
 		expect(audioEl.currentTime).toBe(100);
+		expect(trackEnded).toBe(true);
 
 		engine.seek(-10);
 		expect(engine.currentPosition).toBe(0);

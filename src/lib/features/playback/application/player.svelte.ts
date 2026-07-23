@@ -53,7 +53,7 @@ export class Player {
 		};
 
 		audioEngine.onTrackEnd = () => {
-			if (this.status === PlaybackStatus.PLAYING) {
+			if (this.status === PlaybackStatus.PLAYING || this.status === PlaybackStatus.PAUSED) {
 				this.stop();
 			}
 		};

@@ -89,6 +89,15 @@ export class AudioEngine {
 
 	seek(position: number) {
 		if (!this.audioElement) return;
+
+		if (this.duration > 0 && position >= this.duration) {
+			const clamped = this.duration;
+			this.audioElement.currentTime = clamped;
+			this.currentPosition = clamped;
+			this.onTrackEnd?.();
+			return;
+		}
+
 		const clamped = Math.max(0, Math.min(position, this.duration || Infinity));
 		this.audioElement.currentTime = clamped;
 		this.currentPosition = clamped;
