@@ -1,0 +1,37 @@
+/* themes.css */
+:root {
+	/* Color Palette - Dark mode first for FocusCast */
+	--bg-primary: #121212;
+	--bg-secondary: #1e1e1e;
+	--bg-tertiary: #2d2d2d;
+
+	--text-primary: #ffffff;
+	--text-secondary: #b3b3b3;
+	--text-tertiary: #808080;
+
+	--accent-primary: #1db954; /* Spotify-like green for familiarity */
+	--accent-secondary: #1ed760;
+
+	--error: #e22134;
+	--warning: #ffc107;
+	--success: #1db954;
+
+	--border-color: #333333;
+
+	/* Spacing */
+	--spacing-xs: 4px;
+	--spacing-sm: 8px;
+	--spacing-md: 16px;
+	--spacing-lg: 24px;
+	--spacing-xl: 32px;
+
+	/* Border Radius */
+	--radius-sm: 4px;
+	--radius-md: 8px;
+	--radius-lg: 12px;
+	--radius-full: 9999px;
+
+	/* Transitions */
+	--transition-fast: 0.15s ease-in-out;
+	--transition-normal: 0.3s ease-in-out;
+}
