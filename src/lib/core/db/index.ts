@@ -1,4 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie';
+import { browser } from '$app/environment';
+import { applyMigrations } from './migrations';
 
 // === ENTITIES ===
 
@@ -71,12 +73,15 @@ export class FocusCastDB extends Dexie {
 			settings: 'key',
 			playbackState: 'trackId'
 		});
+
+		applyMigrations(this);
 	}
 }
 
 export const db = new FocusCastDB();
 
 export async function checkIntegrity(): Promise<boolean> {
+	if (!browser) return true; // Server-side rendering always passes integrity
 	try {
 		await db.open();
 		return true;
