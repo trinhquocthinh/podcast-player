@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { dialogState } from './dialog.svelte';
+	import { dialogState } from './dialogState.svelte';
 	import { fade } from 'svelte/transition';
 </script>
 

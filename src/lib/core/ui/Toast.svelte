@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { toastState } from './toast.svelte';
+	import { toastState } from './toastState.svelte';
 	import { slide } from 'svelte/transition';
 </script>
 
