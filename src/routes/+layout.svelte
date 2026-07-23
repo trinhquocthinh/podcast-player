@@ -5,6 +5,7 @@
 	import { onMount } from 'svelte';
 	import { checkIntegrity } from '$lib/core/db';
 	import favicon from '$lib/assets/favicon.svg';
+	import PlayerBar from '$lib/features/playback/ui/PlayerBar.svelte';
 
 	let { children } = $props();
 	let dbReady = $state(false);
@@ -26,8 +27,8 @@
 		{@render children()}
 	</main>
 
-	<!-- Placeholder for PlayerBar in Phase 2 -->
-	<div class="player-bar-placeholder">PlayerBar Placeholder</div>
+	<!-- Player Bar -->
+	<PlayerBar />
 </div>
 
 <Toast />
@@ -45,20 +46,5 @@
 		flex: 1;
 		overflow-y: auto;
 		padding-bottom: 80px; /* Space for player bar */
-	}
-
-	.player-bar-placeholder {
-		position: fixed;
-		bottom: 0;
-		left: 0;
-		right: 0;
-		height: 80px;
-		background-color: var(--bg-secondary);
-		border-top: 1px solid var(--border);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		color: var(--text-secondary);
-		z-index: 100;
 	}
 </style>
