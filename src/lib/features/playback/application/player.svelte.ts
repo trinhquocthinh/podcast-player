@@ -29,6 +29,14 @@ export class Player {
 		// Bind engine events
 		audioEngine.onLoadSuccess = () => {
 			if (this.status === PlaybackStatus.LOADING) {
+				if (this.currentTrack && this.currentTrack.duration === 0 && audioEngine.duration > 0) {
+					const newDuration = audioEngine.duration;
+					this.currentTrack.duration = newDuration;
+					db.tracks.update(this.currentTrack.id, { duration: newDuration }).catch((err) => {
+						console.error('Failed to update track duration:', err);
+					});
+				}
+
 				if (this.pendingStartPos > 0) {
 					audioEngine.seek(this.pendingStartPos);
 					this.pendingStartPos = 0;

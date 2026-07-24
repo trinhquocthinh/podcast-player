@@ -10,11 +10,20 @@ export const dbOps = {
 	},
 
 	async deletePodcast(feedUrl: string) {
-		return db.transaction('rw', [db.podcasts, db.tracks], async () => {
+		return db.transaction('rw', [db.podcasts, db.tracks, db.bookmarks], async () => {
 			await db.podcasts.delete(feedUrl);
 			// Cascading delete tracks
 			const trackIds = await db.tracks.where('podcastFeedUrl').equals(feedUrl).primaryKeys();
 			await db.tracks.bulkDelete(trackIds);
+
+			// Mark associated bookmarks as orphaned (BR-BM-005: ORPHAN_PRESERVE)
+			await db.bookmarks
+				.where('trackId')
+				.anyOf(trackIds as string[])
+				.modify({
+					orphaned: true,
+					updatedAt: new Date().toISOString()
+				});
 		});
 	},
 

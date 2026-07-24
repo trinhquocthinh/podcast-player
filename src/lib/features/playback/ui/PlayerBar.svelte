@@ -5,6 +5,7 @@
 	import SpeedControl from './SpeedControl.svelte';
 	import SilenceSkipToggle from './SilenceSkipToggle.svelte';
 	import TimeSavedDisplay from './TimeSavedDisplay.svelte';
+	import QuickBookmarkButton from '$lib/features/bookmark/ui/QuickBookmarkButton.svelte';
 
 	let currentTrack = $derived(player.currentTrack);
 	let error = $derived(player.error);
@@ -33,6 +34,7 @@
 		<div class="right-controls">
 			<TimeSavedDisplay />
 			<div class="toggles">
+				<QuickBookmarkButton />
 				<SilenceSkipToggle />
 				<SpeedControl />
 			</div>

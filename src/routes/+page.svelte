@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { AddFeedForm, PodcastList } from '$lib/features/library';
+	import { AddFeedForm, PodcastList, LocalTrackList } from '$lib/features/library';
 </script>
 
 <div class="page-container">
@@ -10,6 +10,7 @@
 	<AddFeedForm />
 
 	<PodcastList />
+	<LocalTrackList />
 </div>
 
 <style>
