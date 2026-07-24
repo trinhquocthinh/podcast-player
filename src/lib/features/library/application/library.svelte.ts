@@ -75,6 +75,16 @@ export class LibraryState {
 	 * Returns warning string if file > 500MB (BR-SRC-002).
 	 */
 	async addLocalFile(file: File): Promise<{ id: string; warning?: string }> {
+		// Storage check: Prevent adding offline files if storage >= 95%
+		const { canDownloadOffline } = await import('$lib/core/storage/storage-monitor');
+		const canDownload = await canDownloadOffline();
+		if (!canDownload) {
+			throw new AppError(
+				'QUOTA_EXCEEDED',
+				'Dung lượng thiết bị đã đầy (≥ 95%). Không thể tải thêm file offline. Vui lòng dọn dẹp bộ nhớ trong phần Cài đặt.'
+			);
+		}
+
 		// BR-SRC-002: Cảnh báo file > 500MB (chỉ cảnh báo, không chặn)
 		const MAX_WARN_SIZE = 500 * 1024 * 1024; // 500MB
 		let warning: string | undefined;

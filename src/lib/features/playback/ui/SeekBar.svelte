@@ -44,6 +44,7 @@
 			onchange={handleSeek}
 			oninput={handleSeek}
 			disabled={duration === 0}
+			aria-label="Seek position"
 		/>
 		{#if duration > 0}
 			{#each bookmarks as bm (bm.id)}

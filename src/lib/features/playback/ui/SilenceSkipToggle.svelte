@@ -7,6 +7,8 @@
 	class:active={player.isSilenceSkipEnabled}
 	onclick={() => player.toggleSilenceSkip()}
 	title={player.isSilenceSkipEnabled ? 'Disable Silence Skipping' : 'Enable Silence Skipping'}
+	aria-label="Toggle silence skipping"
+	aria-pressed={player.isSilenceSkipEnabled}
 >
 	<svg
 		xmlns="http://www.w3.org/2000/svg"

@@ -4,9 +4,14 @@
 
 	let { bookmark, onclose } = $props<{ bookmark: Bookmark; onclose: () => void }>();
 
-	let note = $state(bookmark.note);
+	let note = $state('');
 	let isSaving = $state(false);
 	let error = $state('');
+
+	import { onMount } from 'svelte';
+	onMount(() => {
+		note = bookmark.note;
+	});
 
 	async function save() {
 		if (note.length > MAX_NOTE_LENGTH) {

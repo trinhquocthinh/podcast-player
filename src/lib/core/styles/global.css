@@ -36,3 +36,9 @@ ol {
 	padding: 0;
 	list-style: none;
 }
+
+/* Accessibility: Focus rings */
+:focus-visible {
+	outline: 2px solid var(--accent-primary, #3498db);
+	outline-offset: 2px;
+}

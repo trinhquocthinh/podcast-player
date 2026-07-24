@@ -31,6 +31,16 @@
 	border-color: var(--text-primary);
 }
 
+.btn-danger {
+	background-color: transparent;
+	color: var(--error-color, #e74c3c);
+	border: 1px solid var(--error-color, #e74c3c);
+}
+
+.btn-danger:hover {
+	background-color: rgba(231, 76, 60, 0.1);
+}
+
 /* Cards */
 .card {
 	background-color: var(--bg-secondary);

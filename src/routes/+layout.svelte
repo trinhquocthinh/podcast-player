@@ -4,6 +4,8 @@
 	import ConfirmDialog from '$lib/core/ui/ConfirmDialog.svelte';
 	import { onMount } from 'svelte';
 	import { checkIntegrity } from '$lib/core/db';
+	import { getStorageInfo, autoCleanupFIFO } from '$lib/core/storage/storage-monitor';
+	import { toastState } from '$lib/core/ui/toastState.svelte';
 	import favicon from '$lib/assets/favicon.svg';
 	import PlayerBar from '$lib/features/playback/ui/PlayerBar.svelte';
 
@@ -15,6 +17,21 @@
 		if (!dbReady) {
 			console.error('Database integrity check failed.');
 		}
+
+		// Background storage check
+		setTimeout(async () => {
+			const info = await getStorageInfo();
+			if (info && info.status === 'critical' && info.usagePercentage >= 100) {
+				const { clearedTracks, bytesFreed } = await autoCleanupFIFO();
+				if (clearedTracks > 0) {
+					const sizeMB = (bytesFreed / (1024 * 1024)).toFixed(2);
+					toastState.add(
+						'success',
+						`Đã tự động giải phóng ${sizeMB} MB. ${clearedTracks} episode offline đã bị xóa cache do hết dung lượng.`
+					);
+				}
+			}
+		}, 3000);
 	});
 </script>
 

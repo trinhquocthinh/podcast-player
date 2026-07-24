@@ -1,34 +1,42 @@
 <script lang="ts">
 	import { liveQuery } from 'dexie';
-	import { db } from '$lib/core/db';
+	import { db, type Podcast } from '$lib/core/db';
 	import { EpisodeList } from '$lib/features/library';
 
 	let { data } = $props();
-	// Must decode because +page.ts might receive encoded URL string
-	const feedUrl = decodeURIComponent(data.feedUrl);
 
-	let podcast = liveQuery(() => db.podcasts.get(feedUrl));
+	// Use $derived to ensure reactivity when data changes
+	let feedUrl = $derived(decodeURIComponent(data.feedUrl));
+	let podcast = $state<Podcast | null | undefined>(undefined);
+
+	$effect(() => {
+		const observable = liveQuery(() => db.podcasts.get(feedUrl));
+		const sub = observable.subscribe((val) => {
+			podcast = val;
+		});
+		return () => sub.unsubscribe();
+	});
 </script>
 
 <div class="podcast-detail">
 	<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 	<a href="/" class="back-link">&larr; Quay lại Thư viện</a>
 
-	{#if $podcast === undefined}
+	{#if podcast === undefined}
 		<p class="loading">Đang tải thông tin podcast...</p>
-	{:else if $podcast === null}
+	{:else if podcast === null}
 		<p class="error">Không tìm thấy Podcast này trong thư viện.</p>
 	{:else}
 		<div class="header">
-			<img src={$podcast.coverImage} alt={$podcast.title} />
+			<img src={podcast.coverImage} alt={podcast.title} />
 			<div class="info">
-				<h1>{$podcast.title}</h1>
-				<p class="author">{$podcast.author}</p>
-				<p class="description">{$podcast.description}</p>
+				<h1>{podcast.title}</h1>
+				<p class="author">{podcast.author}</p>
+				<p class="description">{podcast.description}</p>
 			</div>
 		</div>
 
-		<EpisodeList feedUrl={$podcast.feedUrl} podcastCover={$podcast.coverImage} />
+		<EpisodeList feedUrl={podcast.feedUrl} podcastCover={podcast.coverImage} />
 	{/if}
 </div>
 

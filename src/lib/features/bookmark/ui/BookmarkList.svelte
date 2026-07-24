@@ -34,6 +34,27 @@
 			<span class="hint">Use the quick bookmark button to mark important moments.</span>
 		</div>
 	{:else}
+		<div class="list-header">
+			<h3>Bookmarks</h3>
+			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+			<a href="/export" class="btn-export" title="Export Notes">
+				<svg
+					width="16"
+					height="16"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				>
+					<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+					<polyline points="7 10 12 15 17 10"></polyline>
+					<line x1="12" y1="15" x2="12" y2="3"></line>
+				</svg>
+				Export
+			</a>
+		</div>
 		{#each bookmarks as bookmark (bookmark.id)}
 			<BookmarkItem {bookmark} />
 		{/each}
@@ -45,6 +66,32 @@
 		display: flex;
 		flex-direction: column;
 		gap: 8px;
+	}
+	.list-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 8px;
+	}
+	.list-header h3 {
+		margin: 0;
+		font-size: 1.1rem;
+	}
+	.btn-export {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 0.85rem;
+		padding: 4px 10px;
+		background: var(--bg-secondary, #333);
+		color: var(--text-primary, #fff);
+		border-radius: 4px;
+		text-decoration: none;
+		border: 1px solid var(--border-color, #444);
+		transition: background 0.2s;
+	}
+	.btn-export:hover {
+		background: var(--bg-hover, #444);
 	}
 	.empty-state {
 		display: flex;
