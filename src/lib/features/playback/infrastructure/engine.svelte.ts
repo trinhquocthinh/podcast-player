@@ -7,10 +7,13 @@ export class AudioEngine {
 	private gainNode: GainNode | null = null;
 	private silenceSkipper: AudioWorkletNode | null = null;
 	private initPromise: Promise<void> | null = null;
+	private iosDest: MediaStreamAudioDestinationNode | null = null;
+	private iosAudio: HTMLAudioElement | null = null;
 
 	currentPosition = $state(0);
 	duration = $state(0);
 	speed = $state(1.0);
+	isFallbackMode = $state(false);
 
 	onLoadSuccess: (() => void) | null = null;
 	onLoadError: ((err: Error) => void) | null = null;
@@ -121,6 +124,15 @@ export class AudioEngine {
 			}
 
 			this.gainNode.connect(this.audioContext.destination);
+
+			// iOS background keep-alive trick
+			if (browser && navigator.userAgent.match(/(iPad|iPhone|iPod)/i)) {
+				this.iosDest = this.audioContext.createMediaStreamDestination();
+				this.gainNode.connect(this.iosDest);
+				this.iosAudio = new Audio();
+				this.iosAudio.srcObject = this.iosDest.stream;
+				this.iosAudio.play().catch((e) => console.warn('Failed to play iosAudio:', e));
+			}
 		})();
 
 		return this.initPromise;
@@ -140,6 +152,14 @@ export class AudioEngine {
 		this.silenceSkipper = null;
 		this.sourceNode = null;
 		this.gainNode = null;
+
+		if (this.iosAudio) {
+			this.iosAudio.pause();
+			this.iosAudio.srcObject = null;
+			this.iosAudio = null;
+		}
+		this.iosDest = null;
+		this.isFallbackMode = false;
 
 		this.createAudioElement();
 
@@ -255,8 +275,51 @@ export class AudioEngine {
 		if (this.audioContext) {
 			this.audioContext.close();
 		}
+		if (this.iosAudio) {
+			this.iosAudio.pause();
+			this.iosAudio.srcObject = null;
+			this.iosAudio.remove();
+		}
 		this.initPromise = null;
 		this.silenceSkipper = null;
+	}
+
+	getAudioContextState(): AudioContextState | undefined {
+		return this.audioContext?.state;
+	}
+
+	async tryResumeContext(): Promise<void> {
+		if (this.audioContext && this.audioContext.state === 'suspended') {
+			await this.audioContext.resume();
+		}
+	}
+
+	switchToFallback() {
+		if (this.isFallbackMode) return;
+		console.warn('Switching to HTML5 fallback mode due to AudioContext suspension');
+		this.isFallbackMode = true;
+
+		// Similar to reloadWithoutCors but we just drop the context
+		const currentPos = this.currentPosition;
+		this.reloadWithoutCors();
+		if (this.audioElement) {
+			this.audioElement.currentTime = currentPos;
+			this.audioElement.play().catch((e) => console.error('Fallback play failed:', e));
+		}
+	}
+
+	restoreWebAudio(originalUrl: string) {
+		if (!this.isFallbackMode) return;
+		console.log('Restoring Web Audio from fallback mode');
+		this.isFallbackMode = false;
+
+		const currentPos = this.currentPosition;
+		const currentSpeed = this.speed;
+
+		this.load(originalUrl);
+		this.seek(currentPos);
+		this.setSpeed(currentSpeed);
+		this.play().catch((e) => console.error('Restore play failed:', e));
 	}
 }
 

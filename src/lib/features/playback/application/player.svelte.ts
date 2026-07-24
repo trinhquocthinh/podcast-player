@@ -1,7 +1,8 @@
 import { audioEngine } from '../infrastructure/engine.svelte';
 import { db, type Track, type PlaybackState } from '$lib/core/db';
 import { browser } from '$app/environment';
-
+import { MediaSessionService } from '../infrastructure/media-session';
+import { toastState } from '$lib/core/ui/toastState.svelte';
 export enum PlaybackStatus {
 	IDLE = 'IDLE',
 	LOADING = 'LOADING',
@@ -22,9 +23,18 @@ export class Player {
 	private pendingStartPos: number = 0;
 	private pendingSpeed: number = 1.0;
 	private currentBlobUrl: string | null = null; // Blob URL tạo on-the-fly, cần revoke khi cleanup
+	private mediaSessionService: MediaSessionService | null = null;
 
 	constructor() {
 		if (!browser || typeof window === 'undefined') return;
+
+		this.mediaSessionService = new MediaSessionService(
+			() => this.play(),
+			() => this.pause(),
+			(time) => this.seek(time),
+			() => this.seekBackward(),
+			() => this.seekForward()
+		);
 
 		// Bind engine events
 		audioEngine.onLoadSuccess = () => {
@@ -52,7 +62,15 @@ export class Player {
 					this.error = err;
 				});
 				this.startPeriodicSave();
-				// TODO: Register MediaSession (Phase 6)
+
+				if (this.currentTrack) {
+					let artworkUrl = undefined;
+					if (this.currentTrack.coverBlob) {
+						artworkUrl = URL.createObjectURL(this.currentTrack.coverBlob);
+					}
+					this.mediaSessionService?.updateMetadata(this.currentTrack, artworkUrl);
+				}
+				this.updateMediaSessionPosition();
 			}
 		};
 
@@ -85,8 +103,37 @@ export class Player {
 		};
 
 		window.addEventListener('visibilitychange', () => {
-			if (document.visibilityState === 'hidden' && this.status === PlaybackStatus.PLAYING) {
-				this.savePosition();
+			if (document.visibilityState === 'hidden') {
+				if (this.status === PlaybackStatus.PLAYING) {
+					this.savePosition();
+				}
+
+				// iOS Fallback trigger check
+				const audioState = audioEngine.getAudioContextState();
+				if (
+					(audioState === 'suspended' || audioState === 'interrupted') &&
+					this.status === PlaybackStatus.PLAYING
+				) {
+					audioEngine.tryResumeContext().catch(() => {
+						audioEngine.switchToFallback();
+						toastState.add(
+							'warning',
+							'Silence Skipping tạm tắt do giới hạn thiết bị. Audio vẫn tiếp tục phát.',
+							5000
+						);
+					});
+				}
+			} else if (document.visibilityState === 'visible') {
+				if (audioEngine.isFallbackMode && this.currentTrack) {
+					// Prepare URL
+					let playableUrl = this.currentTrack.audioUrl;
+					if (this.currentTrack.sourceType === 'local' && this.currentBlobUrl) {
+						playableUrl = this.currentBlobUrl;
+					}
+					audioEngine.restoreWebAudio(playableUrl);
+
+					toastState.add('success', 'Silence Skipping restored', 3000);
+				}
 			}
 		});
 
@@ -154,6 +201,7 @@ export class Player {
 			this.status = PlaybackStatus.PLAYING;
 			this.startPeriodicSave();
 			await audioEngine.play();
+			this.updateMediaSessionPosition();
 		}
 	}
 
@@ -163,6 +211,7 @@ export class Player {
 			audioEngine.pause();
 			this.stopPeriodicSave();
 			this.savePosition();
+			this.updateMediaSessionPosition();
 		}
 	}
 
@@ -217,6 +266,30 @@ export class Player {
 		this.savePosition();
 	}
 
+	seek(time: number) {
+		audioEngine.seek(time);
+		this.savePosition();
+		this.updateMediaSessionPosition();
+	}
+
+	seekBackward() {
+		this.seek(Math.max(0, audioEngine.currentPosition - 15));
+	}
+
+	seekForward() {
+		this.seek(Math.min(audioEngine.duration, audioEngine.currentPosition + 30));
+	}
+
+	private updateMediaSessionPosition() {
+		if (this.currentTrack && this.mediaSessionService) {
+			this.mediaSessionService.updatePositionState(
+				audioEngine.currentPosition,
+				audioEngine.duration,
+				audioEngine.speed
+			);
+		}
+	}
+
 	private startPeriodicSave() {
 		if (this.saveInterval) clearInterval(this.saveInterval);
 		this.saveInterval = setInterval(() => {
@@ -243,6 +316,7 @@ export class Player {
 		};
 		try {
 			await db.playbackState.put(state);
+			this.updateMediaSessionPosition(); // Ensure MediaSession is periodically synced
 		} catch (err) {
 			console.error('Failed to save playback state', err);
 		}
