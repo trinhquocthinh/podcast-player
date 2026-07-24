@@ -40,7 +40,21 @@ class MockAudioContext {
 	createMediaElementSource = vi.fn().mockReturnValue({ connect: vi.fn() });
 	createGain = vi.fn().mockReturnValue({ connect: vi.fn() });
 	destination = {};
+	audioWorklet = {
+		addModule: vi.fn().mockResolvedValue(undefined)
+	};
 }
+
+// Mock AudioWorkletNode
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(global as any).AudioWorkletNode = class {
+	port = {
+		postMessage: vi.fn(),
+		onmessage: null
+	};
+	connect = vi.fn();
+	disconnect = vi.fn();
+};
 
 describe('AudioEngine', () => {
 	let engine: AudioEngine;

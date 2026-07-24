@@ -36,7 +36,6 @@
 	{:else}
 		<div class="list-header">
 			<h3>Bookmarks</h3>
-			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 			<a href="/export" class="btn-export" title="Export Notes">
 				<svg
 					width="16"

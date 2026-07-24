@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Bookmark } from '$lib/core/db';
-	import { formatTime } from '$lib/features/playback/utils/format';
+	import { formatTimestamp } from '$lib/core/utils/time';
 	import { audioEngine } from '$lib/features/playback/infrastructure/engine.svelte';
 	import { player } from '$lib/features/playback/application/player.svelte';
 	import { bookmarkService } from '../infrastructure/bookmark-service';
@@ -65,7 +65,7 @@
 			>
 				<polygon points="5 3 19 12 5 21 5 3"></polygon>
 			</svg>
-			{formatTime(bookmark.timestampStart)}
+			{formatTimestamp(bookmark.timestampStart)}
 		</button>
 
 		<div class="actions">

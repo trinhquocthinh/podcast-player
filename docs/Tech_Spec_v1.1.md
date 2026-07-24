@@ -1239,6 +1239,28 @@ export function downloadFile(content: string, filename: string): void {
 
 ---
 
-> **Tổng cộng: Tech-Spec v1.1 | 10 sections (+ §3.4 Git Hooks & Quality Gate) | Sẵn sàng cho implementation.**
+# 11. Testing Patterns
+
+## 11.1 Unit Testing (`Vitest`)
+
+- **Environment**: Node environment by default, with `jsdom` or mock environments for browser APIs.
+- **Mocking**:
+  - For `AudioWorklet` and `AudioContext`, use explicit class/global mocks in `global.AudioWorkletNode` and `global.AudioContext`.
+  - For IndexedDB, use `fake-indexeddb/auto`. **Important**: When using `fake-indexeddb` with Dexie, avoid `db.delete()`. Use `db.tables.forEach(t => t.clear())` to reset state between tests to prevent closed database connection errors.
+
+## 11.2 Integration Testing (`MSW`)
+
+- **Strategy**: Test SvelteKit `+server.ts` API endpoints directly in Vitest by calling the `POST`/`GET` handler functions with mock `Request` objects.
+- **External Mocking**: Use MSW (`msw/node`) to intercept external fetches (e.g. RSS feeds) executed by server handlers. Ensure `server.listen()` is configured with `{ onUnhandledRequest: 'error' }` to catch missing mocks.
+
+## 11.3 E2E Testing (`Playwright`)
+
+- **Strategy**: Use Playwright's `page.route()` to mock API endpoints (`/api/feed`) during browser tests to ensure stability.
+- **Location**: Store tests in `tests/e2e/*.e2e.ts`.
+- **Matching**: Rely on user-visible text (e.g. `page.locator('text=...')`) and semantic labels where possible.
+
+---
+
+> **Tổng cộng: Tech-Spec v1.1 | 11 sections (+ §3.4 Git Hooks & Quality Gate) | Sẵn sàng cho implementation.**
 >
 > Tham chiếu: [PRD_v1.0.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/PRD_v1.0.md) · [SDD_v1.1.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/SDD_v1.1.md) · [Master_Plan_v1.1.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/Master_Plan_v1.1.md)
