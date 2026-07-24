@@ -15,6 +15,8 @@ export class Player {
 	currentTrack = $state<Track | null>(null);
 	status = $state<PlaybackStatus>(PlaybackStatus.IDLE);
 	error = $state<Error | null>(null);
+	isSilenceSkipEnabled = $state(false);
+	silenceSkippedTime = $state(0);
 
 	private saveInterval: ReturnType<typeof setInterval> | null = null;
 	private pendingStartPos: number = 0;
@@ -69,6 +71,10 @@ export class Player {
 			}
 		};
 
+		audioEngine.onSilenceSkipped = (timeSaved: number) => {
+			this.silenceSkippedTime = timeSaved;
+		};
+
 		window.addEventListener('visibilitychange', () => {
 			if (document.visibilityState === 'hidden' && this.status === PlaybackStatus.PLAYING) {
 				this.savePosition();
@@ -108,13 +114,21 @@ export class Player {
 			} else {
 				this.pendingSpeed = 1.0;
 			}
+			if (state && state.silenceSkippingEnabled !== undefined) {
+				this.isSilenceSkipEnabled = state.silenceSkippingEnabled;
+			} else {
+				this.isSilenceSkipEnabled = false;
+			}
 		} catch (e) {
 			console.error('Failed to recover playback state:', e);
 			this.pendingStartPos = 0;
 			this.pendingSpeed = 1.0;
+			this.isSilenceSkipEnabled = false;
 		}
 
 		audioEngine.load(track.audioUrl);
+		audioEngine.enableSilenceSkip(this.isSilenceSkipEnabled);
+		this.silenceSkippedTime = 0;
 	}
 
 	async play() {
@@ -167,6 +181,12 @@ export class Player {
 		}
 	}
 
+	toggleSilenceSkip() {
+		this.isSilenceSkipEnabled = !this.isSilenceSkipEnabled;
+		audioEngine.enableSilenceSkip(this.isSilenceSkipEnabled);
+		this.savePosition();
+	}
+
 	private startPeriodicSave() {
 		if (this.saveInterval) clearInterval(this.saveInterval);
 		this.saveInterval = setInterval(() => {
@@ -187,7 +207,7 @@ export class Player {
 			trackId: this.currentTrack.id,
 			position: audioEngine.currentPosition,
 			speed: audioEngine.speed,
-			silenceSkippingEnabled: false,
+			silenceSkippingEnabled: this.isSilenceSkipEnabled,
 			// eslint-disable-next-line svelte/prefer-svelte-reactivity
 			updatedAt: new Date().toISOString()
 		};

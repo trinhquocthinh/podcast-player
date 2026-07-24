@@ -132,4 +132,39 @@ describe('Player State Machine', () => {
 		expect(audioEngine.seek).toHaveBeenCalledWith(7);
 		expect(audioEngine.setSpeed).toHaveBeenCalledWith(1.5);
 	});
+
+	it('should recover silence skipping state on selectTrack', async () => {
+		await db.playbackState.put({
+			trackId: mockTrack.id,
+			position: 10,
+			speed: 1.5,
+			silenceSkippingEnabled: true,
+			updatedAt: new Date().toISOString()
+		});
+
+		audioEngine.enableSilenceSkip = vi.fn();
+		await player.selectTrack(mockTrack);
+
+		expect(player.isSilenceSkipEnabled).toBe(true);
+		expect(audioEngine.enableSilenceSkip).toHaveBeenCalledWith(true);
+	});
+
+	it('should toggle silence skipping', () => {
+		audioEngine.enableSilenceSkip = vi.fn();
+
+		expect(player.isSilenceSkipEnabled).toBe(false);
+
+		player.toggleSilenceSkip();
+
+		expect(player.isSilenceSkipEnabled).toBe(true);
+		expect(audioEngine.enableSilenceSkip).toHaveBeenCalledWith(true);
+	});
+
+	it('should update silenceSkippedTime when engine reports it', () => {
+		expect(player.silenceSkippedTime).toBe(0);
+		if (audioEngine.onSilenceSkipped) {
+			audioEngine.onSilenceSkipped(15.5);
+		}
+		expect(player.silenceSkippedTime).toBe(15.5);
+	});
 });

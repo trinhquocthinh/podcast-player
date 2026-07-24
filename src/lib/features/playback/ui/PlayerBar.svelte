@@ -3,6 +3,8 @@
 	import PlaybackControls from './PlaybackControls.svelte';
 	import SeekBar from './SeekBar.svelte';
 	import SpeedControl from './SpeedControl.svelte';
+	import SilenceSkipToggle from './SilenceSkipToggle.svelte';
+	import TimeSavedDisplay from './TimeSavedDisplay.svelte';
 
 	let currentTrack = $derived(player.currentTrack);
 	let error = $derived(player.error);
@@ -29,7 +31,11 @@
 		</div>
 
 		<div class="right-controls">
-			<SpeedControl />
+			<TimeSavedDisplay />
+			<div class="toggles">
+				<SilenceSkipToggle />
+				<SpeedControl />
+			</div>
 		</div>
 	</div>
 </div>
@@ -94,7 +100,15 @@
 	.right-controls {
 		flex: 1;
 		display: flex;
+		flex-direction: column;
 		justify-content: flex-end;
+		align-items: flex-end;
+		gap: 8px;
+	}
+	.toggles {
+		display: flex;
+		gap: 12px;
+		align-items: center;
 	}
 	@media (max-width: 768px) {
 		.player-bar {
