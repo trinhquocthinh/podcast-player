@@ -21,6 +21,7 @@ export class Player {
 	private saveInterval: ReturnType<typeof setInterval> | null = null;
 	private pendingStartPos: number = 0;
 	private pendingSpeed: number = 1.0;
+	private currentBlobUrl: string | null = null; // Blob URL tạo on-the-fly, cần revoke khi cleanup
 
 	constructor() {
 		if (!browser || typeof window === 'undefined') return;
@@ -126,7 +127,16 @@ export class Player {
 			this.isSilenceSkipEnabled = false;
 		}
 
-		audioEngine.load(track.audioUrl);
+		// Tạo playable URL: dùng audioUrl cho RSS, tạo blob URL on-the-fly cho local files.
+		// CRITICAL: Không lưu blob: URL vào DB vì nó chết khi đóng tab.
+		let playableUrl = track.audioUrl;
+		if (track.sourceType === 'local' && track.audioBlob) {
+			this.revokeCurrentBlobUrl(); // Revoke URL cũ tránh memory leak
+			playableUrl = URL.createObjectURL(track.audioBlob);
+			this.currentBlobUrl = playableUrl;
+		}
+
+		audioEngine.load(playableUrl);
 		audioEngine.enableSilenceSkip(this.isSilenceSkipEnabled);
 		this.silenceSkippedTime = 0;
 	}
@@ -157,6 +167,7 @@ export class Player {
 			this.savePosition();
 			audioEngine.stop();
 			this.stopPeriodicSave();
+			this.revokeCurrentBlobUrl(); // Giải phóng blob URL tránh memory leak
 			this.status = PlaybackStatus.STOPPED;
 		}
 	}
@@ -178,6 +189,17 @@ export class Player {
 	dismissError() {
 		if (this.status === PlaybackStatus.ERROR) {
 			this.reset();
+		}
+	}
+
+	/**
+	 * Revoke blob URL hiện tại để tránh memory leak.
+	 * Phải gọi trước khi tạo blob URL mới hoặc khi stop/destroy.
+	 */
+	private revokeCurrentBlobUrl() {
+		if (this.currentBlobUrl) {
+			URL.revokeObjectURL(this.currentBlobUrl);
+			this.currentBlobUrl = null;
 		}
 	}
 

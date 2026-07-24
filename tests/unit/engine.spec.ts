@@ -51,6 +51,8 @@ describe('AudioEngine', () => {
 		global.window = { AudioContext: MockAudioContext } as unknown as typeof window;
 
 		engine = new AudioEngine();
+		// AudioElement is now created in load()
+		engine.load('mock');
 	});
 
 	it('should initialize and listen to events', () => {
@@ -109,7 +111,6 @@ describe('AudioEngine', () => {
 
 		expect(audioEl.pause).toHaveBeenCalled();
 		expect(engine.currentPosition).toBe(0); // seek(0)
-		expect(audioEl.src).toBe('');
 	});
 
 	it('should clamp seek position and handle track end', () => {

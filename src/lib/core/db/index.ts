@@ -19,7 +19,9 @@ export interface Track {
 	podcastFeedUrl?: string; // FK → Podcast (null for local files)
 	title: string;
 	description?: string;
-	audioUrl: string; // Remote URL or blob URL
+	audioUrl: string; // Remote URL (empty for local files)
+	audioBlob?: Blob; // Stored locally
+	coverBlob?: Blob; // Cover image stored locally
 	duration: number; // seconds
 	publishedAt?: string;
 	episodeNumber?: number;

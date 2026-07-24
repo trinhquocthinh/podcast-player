@@ -19,7 +19,21 @@ export class AudioEngine {
 	onSilenceSkipped: ((timeSaved: number) => void) | null = null;
 
 	constructor() {
+		// Initialization is now deferred to load() to ensure a clean slate per track
+	}
+
+	private createAudioElement() {
 		if (!browser || typeof Audio === 'undefined') return;
+
+		if (this.audioElement) {
+			this.audioElement.pause();
+			// Chú ý: TUYỆT ĐỐI không gọi `removeAttribute('src')` hay `load()` ở đây.
+			// Việc đó sẽ trigger event `error` (MEDIA_ERR_SRC_NOT_SUPPORTED) ngay lập tức.
+			// Do event listener cũ vẫn còn, nó sẽ gọi `this.onLoadError` của Engine,
+			// làm Player rơi vào trạng thái ERROR và kẹt luôn.
+			// Chỉ cần pause() là đủ, Garbage Collector sẽ lo phần còn lại.
+		}
+
 		this.audioElement = new Audio();
 
 		this.audioElement.addEventListener('timeupdate', () => {
@@ -46,6 +60,12 @@ export class AudioEngine {
 		});
 
 		this.audioElement.addEventListener('error', () => {
+			// Nếu CORS đang bật và load thất bại → thử lại không CORS
+			if (this.corsMode && this.duration === 0) {
+				this.reloadWithoutCors();
+				return;
+			}
+
 			const err = new Error(this.audioElement?.error?.message || 'Audio playback error');
 			if (this.duration === 0) {
 				this.onLoadError?.(err);
@@ -90,7 +110,7 @@ export class AudioEngine {
 				);
 			}
 
-			this.sourceNode = this.audioContext.createMediaElementSource(this.audioElement);
+			this.sourceNode = this.audioContext.createMediaElementSource(this.audioElement!);
 			this.gainNode = this.audioContext.createGain();
 
 			if (this.silenceSkipper) {
@@ -106,19 +126,62 @@ export class AudioEngine {
 		return this.initPromise;
 	}
 
+	private corsMode: boolean = true; // Track nếu CORS đang bật
+
 	load(url: string) {
+		if (!browser) return;
+
+		// Reset Web Audio context to avoid reusing tainted source nodes
+		if (this.audioContext) {
+			this.audioContext.close();
+			this.audioContext = null;
+		}
+		this.initPromise = null;
+		this.silenceSkipper = null;
+		this.sourceNode = null;
+		this.gainNode = null;
+
+		this.createAudioElement();
+
 		if (!this.audioElement) return;
 		this.duration = 0;
 		this.currentPosition = 0;
+		this.corsMode = true;
+		this.audioElement.crossOrigin = 'anonymous';
 		this.audioElement.src = url;
+		this.audioElement.load();
+	}
+
+	/**
+	 * Retry load không dùng CORS — fallback khi server không hỗ trợ
+	 * Access-Control-Allow-Origin. Sẽ mất tính năng Silence Skip
+	 * (Web Audio API cần CORS), nhưng audio vẫn phát bình thường.
+	 */
+	private reloadWithoutCors() {
+		if (!this.audioElement || !this.corsMode) return;
+		console.warn('CORS failed for audio URL, retrying without crossOrigin (Silence Skip disabled)');
+		this.corsMode = false;
+		const currentSrc = this.audioElement.src;
+
+		// Tạo lại một Audio Element hoàn toàn mới để đảm bảo trình duyệt
+		// không bị dính (cache) trạng thái crossOrigin cũ.
+		this.createAudioElement();
+
+		if (!this.audioElement) return;
+		// Tuyệt đối không set crossOrigin ở đây để phát bình thường
+		this.audioElement.src = currentSrc;
 		this.audioElement.load();
 	}
 
 	async play() {
 		if (!this.audioElement) return;
-		await this.initWebAudio();
-		if (this.audioContext?.state === 'suspended') {
-			await this.audioContext.resume();
+		// Chỉ khởi tạo Web Audio API khi CORS hoạt động.
+		// Nếu CORS bị tắt (fallback), phát trực tiếp qua HTML Audio element.
+		if (this.corsMode) {
+			await this.initWebAudio();
+			if (this.audioContext?.state === 'suspended') {
+				await this.audioContext.resume();
+			}
 		}
 		await this.audioElement.play();
 	}
@@ -131,7 +194,7 @@ export class AudioEngine {
 		if (this.audioElement) {
 			this.audioElement.pause();
 			this.seek(0);
-			this.audioElement.src = '';
+			// Không gọi this.audioElement.src = '' để tránh error "Empty src attribute"
 		}
 	}
 
@@ -186,7 +249,7 @@ export class AudioEngine {
 	destroy() {
 		if (this.audioElement) {
 			this.audioElement.pause();
-			this.audioElement.src = '';
+			// Không gọi this.audioElement.src = '' để tránh error "Empty src attribute"
 			this.audioElement.remove();
 		}
 		if (this.audioContext) {

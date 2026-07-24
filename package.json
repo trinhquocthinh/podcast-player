@@ -45,6 +45,7 @@
 	},
 	"dependencies": {
 		"dexie": "^4.4.4",
+		"music-metadata-browser": "^2.5.11",
 		"rss-parser": "^3.13.0",
 		"uuid": "^14.0.1"
 	}
