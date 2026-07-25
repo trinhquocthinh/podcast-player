@@ -1,13 +1,16 @@
 # Product Requirements Document (PRD)
 
-# Distraction-Free Audio Learning Player
+# Distraction-Free Audio Learning Player (FocusCast)
 
-## Version 1.0
+## Version 1.1
 
 > **Tài liệu tham chiếu:**
 >
-> - [Problem_Definition_v1.0.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/Problem_Definition_v1.0.md)
-> - [Business_Rules_v1.1.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/Business_Rules_v1.1.md)
+> - [Problem_Definition_v1.0.md](/docs/Problem_Definition_v1.0.md)
+> - [Business_Rules_v1.2.md](/docs/Business_Rules_v1.2.md)
+> - [Master_Plan_v1.2.md](/docs/Master_Plan_v1.2.md)
+
+> **Changelog v1.1 (2026-07-25):** Đánh dấu MVP (F01–F11) đã **Release**. Cập nhật §6 MoSCoW và §8 Out-of-Scope để phản ánh phân tích chuyên sâu Phase 2 tại Business Rules §12 (Cloud Sync/AI/Sharing chuyển từ "loại trừ tuyệt đối" sang "opt-in có điều kiện"; Social/Recommendation vẫn cấm vĩnh viễn). Cập nhật §10 Release Plan với trạng thái hoàn thành thực tế và trỏ tới Master Plan Phase 10 chi tiết. Ghi chú F08 (Export) hiện chỉ hỗ trợ Markdown ở MVP.
 
 ---
 
@@ -365,12 +368,13 @@ IDLE → LOADING → PLAYING ⇄ PAUSED → STOPPED → IDLE
 
 # 6. Feature Prioritization (MoSCoW)
 
-| Priority             | Features                                                                                                                                                                                          |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Must-have (P0)**   | F01 RSS Feed, F02 Local Import, F04 Playback Core, F05 Silence Skipping, F06 Quick Bookmark, F07 Bookmark Management, F08 Export Notes, F09 Media Session, F10 Background Audio, F11 Data Storage |
-| **Should-have (P1)** | F03 Offline Download                                                                                                                                                                              |
-| **Could-have (P2)**  | Cấu hình nâng cao Silence Skipping (user-adjustable threshold)                                                                                                                                    |
-| **Won't-have (v1)**  | AI Speech-to-Text, AI Summary, Cloud Sync, Social features, Podcast recommendation                                                                                                                |
+| Priority                               | Features                                                                                                                                                                                          | Trạng thái (v1.1)                                                                     |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| **Must-have (P0)**                     | F01 RSS Feed, F02 Local Import, F04 Playback Core, F05 Silence Skipping, F06 Quick Bookmark, F07 Bookmark Management, F08 Export Notes, F09 Media Session, F10 Background Audio, F11 Data Storage | ✅ Đã Release                                                                         |
+| **Should-have (P1)**                   | F03 Offline Download                                                                                                                                                                              | 🟡 Hạ tầng xong, UI "Download for Offline" cho RSS Episode chuyển sang Phase 2 (10.1) |
+| **Could-have (P2)**                    | Cấu hình nâng cao Silence Skipping (user-adjustable threshold)                                                                                                                                    | 🔲 Chuyển sang Phase 2 (10.3)                                                         |
+| **Won't-have (v1, xem lại ở Phase 2)** | AI Speech-to-Text/Summary, Cloud Sync, Chia sẻ Bookmark tĩnh — xem phân tích chuyên sâu tại Business Rules §12                                                                                    | 🟡 Opt-in có điều kiện ở Phase 2 (10.4, 10.5, 10.6)                                   |
+| **Won't-have (vĩnh viễn)**             | Social Network đầy đủ (feed/follow/profile công khai), Thuật toán đề xuất nội dung mới                                                                                                            | 🔴 Cấm vĩnh viễn (BR-P2-SOC-001, BR-P2-REC-001)                                       |
 
 ---
 
@@ -409,16 +413,28 @@ IDLE → LOADING → PLAYING ⇄ PAUSED → STOPPED → IDLE
 
 ---
 
-# 8. Out of Scope (v1.0)
+# 8. Out of Scope
 
-| Tính năng           | Lý do loại trừ                   |
-| ------------------- | -------------------------------- |
-| AI Speech-to-Text   | Phức tạp, cần cloud infra        |
-| AI tóm tắt nội dung | Phức tạp, cần LLM                |
-| Cloud Syncing       | Cần backend, vi phạm local-first |
-| Mạng xã hội         | Ngoài phạm vi sản phẩm           |
-| Đề xuất Podcast     | Cần data pipeline + ML           |
-| Hosting audio       | Hệ thống chỉ là Player           |
+## 8.1 Out of Scope tuyệt đối cho MVP (v1.0) — ĐÃ áp dụng khi release
+
+| Tính năng           | Lý do loại trừ                                                               |
+| ------------------- | ---------------------------------------------------------------------------- |
+| AI Speech-to-Text   | Phức tạp, cần cloud infra hoặc on-device model nặng — chưa cần thiết cho MVP |
+| AI tóm tắt nội dung | Phức tạp, cần LLM — chưa cần thiết cho MVP                                   |
+| Cloud Syncing       | Cần backend, phải thiết kế đúng E2EE mới không vi phạm Local-First           |
+| Mạng xã hội         | Ngoài phạm vi sản phẩm — xem §8.2                                            |
+| Đề xuất Podcast     | Cần data pipeline + ML, mâu thuẫn triết lý "không cạnh tranh Discovery"      |
+| Hosting audio       | Hệ thống chỉ là Player — cấm vĩnh viễn, không xem lại ở bất kỳ Phase nào     |
+
+## 8.2 Phân loại lại cho Phase 2 (v2.0) — sau phân tích chuyên sâu
+
+> Sau khi release MVP, các hạng mục Out-of-Scope đã được phân tích lại chi tiết tại [Business_Rules_v1.2.md](/docs/Business_Rules_v1.2.md) §12 và có Master Plan chi tiết tại [Master_Plan_v1.2.md](/docs/Master_Plan_v1.2.md) Phase 10. Kết luận: KHÔNG phải mọi tính năng "Out of Scope" đều bị cấm vĩnh viễn — chia làm 3 nhóm:
+
+| Nhóm                               | Tính năng                                                                                                         | Quyết định Phase 2                                                                                                             |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| 🟢 Nên làm sớm                     | Hoàn thiện Offline Download, Export JSON, Backup/Restore Local                                                    | Không đổi Local-First, chỉ hoàn thiện MVP còn dang dở                                                                          |
+| 🟡 Cân nhắc, có điều kiện (Opt-in) | Cloud Sync (E2EE), AI Assist (transcribe quanh Bookmark + tóm tắt Note, ưu tiên on-device), Chia sẻ Bookmark tĩnh | Mặc định TẮT, không vi phạm Local-First/Ad-free, có Business Rules ràng buộc chặt (BR-P2-CLOUD-\*, BR-P2-AI-\*, BR-P2-SOC-002) |
+| 🔴 Cấm vĩnh viễn                   | Social Network đầy đủ (feed, follow, profile công khai), Thuật toán đề xuất nội dung mới, Hosting/phân phối audio | Mâu thuẫn trực tiếp với Product Objective — không xem lại                                                                      |
 
 ---
 
@@ -436,26 +452,30 @@ IDLE → LOADING → PLAYING ⇄ PAUSED → STOPPED → IDLE
 
 # 10. Release Plan
 
-## Phase 1 — MVP (v1.0)
+## Phase 1 — MVP (v1.0) — ✅ ĐÃ HOÀN THÀNH & RELEASE (2026-07-25)
 
 **Mục tiêu:** Core playback + Silence Skipping + Bookmark + Export
 
-| Milestone            | Nội dung                                                         |
-| -------------------- | ---------------------------------------------------------------- |
-| M1: Foundation       | SvelteKit setup, UI Shell, IndexedDB schema (Dexie.js)           |
-| M2: Playback         | Audio Engine + Speed Control + State Machine + Position Recovery |
-| M3: Silence Skipping | Web Audio API pipeline + AudioWorkletNode + Crossfade            |
-| M4: Source           | RSS Parser (server-side) + Local File Import                     |
-| M5: Bookmark         | Quick Bookmark + Management + Navigation                         |
-| M6: Integration      | Media Session + Background Audio + Fallback                      |
-| M7: Export & Polish  | Export Markdown + Storage Management + UI polish                 |
+| Milestone            | Nội dung                                                               | Trạng thái                            |
+| -------------------- | ---------------------------------------------------------------------- | ------------------------------------- |
+| M1: Foundation       | SvelteKit setup, UI Shell, IndexedDB schema (Dexie.js)                 | ✅                                    |
+| M2: Playback         | Audio Engine + Speed Control + State Machine + Position Recovery       | ✅                                    |
+| M3: Silence Skipping | Web Audio API pipeline + AudioWorkletNode + Crossfade                  | ✅                                    |
+| M4: Source           | RSS Parser (server-side) + Local File Import + Apple Podcasts resolver | ✅ (mở rộng thêm so với kế hoạch gốc) |
+| M5: Bookmark         | Quick Bookmark + Management + Navigation                               | ✅                                    |
+| M6: Integration      | Media Session + Background Audio + Fallback (CORS hybrid)              | ✅                                    |
+| M7: Export & Polish  | Export Markdown + Storage Management + UI polish                       | ✅ (Export: chỉ Markdown ở MVP)       |
 
-## Phase 2 — Enhanced (v2.0, tương lai)
+## Phase 2 — v2.0 (kế hoạch chi tiết, chưa triển khai)
 
-- Offline Download (nâng từ P1 lên P0).
-- User-adjustable Silence Skipping threshold qua UI.
-- Waveform visualization.
-- Keyboard shortcuts chuyên sâu.
+> Xem đầy đủ 6 sub-phase (10.1 → 10.6), effort sizing, checklist và exit criteria tại [Master_Plan_v1.2.md](/docs/Master_Plan_v1.2.md) — Phase 10. Tóm tắt:
+
+1. **10.1** Hoàn thiện Offline Download (nút tải cho RSS Episode).
+2. **10.2** Export JSON + Backup/Restore toàn bộ dữ liệu (Local-First, không cần Cloud).
+3. **10.3** Settings UI mở rộng (user-adjustable Silence Skipping threshold, Playback defaults).
+4. **10.4** Cloud Sync — Opt-in, End-to-End Encrypted (E2EE), chỉ đồng bộ Bookmark/Settings/PlaybackState.
+5. **10.5** AI Assist — Opt-in, on-device ưu tiên (Transcribe cục bộ quanh Bookmark, Tóm tắt Note của người dùng).
+6. **10.6** Chia sẻ Bookmark tĩnh (ảnh/link tạm thời, KHÔNG phải Social Network).
 
 ---
 

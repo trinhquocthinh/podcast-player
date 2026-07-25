@@ -1,18 +1,19 @@
 # Spec-Driven Development (SDD)
 
-# Distraction-Free Audio Learning Player
+# Distraction-Free Audio Learning Player (FocusCast)
 
-## Version 1.1
+## Version 1.2
 
 > **Tài liệu tham chiếu:**
 >
-> - [Problem_Definition_v1.0.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/Problem_Definition_v1.0.md)
-> - [Business_Rules_v1.1.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/Business_Rules_v1.1.md)
-> - [PRD_v1.0.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/PRD_v1.0.md)
-> - [Tech_Spec_v1.1.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/Tech_Spec_v1.1.md)
+> - [Problem_Definition_v1.0.md](/docs/Problem_Definition_v1.0.md)
+> - [Business_Rules_v1.2.md](/docs/Business_Rules_v1.2.md)
+> - [PRD_v1.1.md](/docs/PRD_v1.1.md)
+> - [Tech_Spec_v1.2.md](/docs/Tech_Spec_v1.2.md)
 
 > **Changelog:**
 >
+> - **v1.2** (2026-07-25) — **Release Review**: Xác nhận route `/api/audio-proxy` (§1.1) **KHÔNG được triển khai** — thay vào đó Audio Engine tự xử lý CORS hoàn toàn ở phía client (xem §2.1.5 mới). Bổ sung §2.1.5 "CORS Hybrid Fallback Strategy" mô tả chuỗi xử lý thực tế 3 cấp (`crossOrigin=anonymous` → no-CORS reload → HTML5 `<audio>` thuần). Bổ sung ghi chú kiến trúc §1.2.1 về quy ước inline-types (types khai báo ngay trong service file thay vì `*.types.ts` riêng) như đã triển khai thực tế.
 > - **v1.1** (2026-07-23): Bổ sung quy tắc bắt buộc Unit Test theo từng function (§7.1) và điều kiện hoàn thành Feature, đồng bộ với chính sách Git Hooks tại Tech-Spec §3.4 và Master-Plan §2.1.
 > - **v1.0** (2026-07-23): Bản khởi tạo.
 
@@ -68,14 +69,14 @@
 │  ┌──────────────────────────────────────────┐                      │
 │  │       API Routes (+server.ts)             │                      │
 │  │     ├─ /api/feed        (RSS Proxy)       │                      │
-│  │     ├─ /api/feed/refresh (Feed Refresh)   │                      │
-│  │     └─ /api/audio-proxy (CORS Proxy)      │                      │
+│  │     └─ /api/feed/refresh (Feed Refresh)   │                      │
+│  │     (⚠️ /api/audio-proxy KHÔNG triển khai │                      │
+│  │      — xem §2.1.5 CORS Hybrid Fallback)   │                      │
 │  └──────────────────────────────────────────┘                      │
 │                                                                     │
 │  Xử lý:                                                            │
 │  • Fetch RSS Feed (bypass CORS)                                    │
 │  • Parse XML → JSON                                                │
-│  • Proxy audio stream (nếu cần bypass CORS)                        │
 │  • Response caching                                                 │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -97,6 +98,8 @@ Các lớp (Layers) bên trong một Feature:
 3. **Feature: Library** (Quản lý Podcast, RSS Fetching, Local Import, Offline DL)
 4. **Feature: Settings** (Quản lý cấu hình, Storage)
 5. **Core / Shared:** Database singleton, UI Kit chung, Utils.
+
+> **Ghi chú triển khai thực tế (v1.2):** Type definitions của từng Feature được khai báo **inline ngay trong service file** (ví dụ `export-service.ts` tự khai báo interface kết quả export của nó) thay vì tách ra file `*.types.ts` riêng biệt như quy ước ban đầu dự kiến. Đây là quy ước đã ổn định trong toàn bộ codebase — chỉ tách type ra file riêng khi type được dùng chung bởi ≥ 2 module (ví dụ `core/types/errors.ts`, `core/db/schema.ts`).
 
 ---
 
@@ -268,6 +271,41 @@ class SilenceSkipProcessor extends AudioWorkletProcessor {
 	}
 }
 ```
+
+### 2.1.5 CORS Hybrid Fallback Strategy (Bổ sung thực tế triển khai — v1.2)
+
+> **Bối cảnh:** SDD v1.0/v1.1 dự kiến route server-side `/api/audio-proxy` để giải quyết CORS khi cần đọc PCM samples cho Silence Skipping từ audio stream cross-origin. Route này **KHÔNG được triển khai**. Thay vào đó, `engine.svelte.ts` tự xử lý một chuỗi fallback 3 cấp hoàn toàn ở phía client, tránh chi phí băng thông của việc proxy toàn bộ audio qua server.
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│ Cấp 1: crossOrigin = "anonymous"                                 │
+│   → Thử load <audio> với crossOrigin='anonymous' (cần cho        │
+│     MediaElementSourceNode + AudioWorklet đọc được samples)      │
+│   → Nếu load thành công (duration > 0, không lỗi): dùng          │
+│     pipeline Web Audio đầy đủ (Silence Skipping hoạt động)       │
+└───────────────────────────┬───────────────────────────────────────┘
+                            │ thất bại (duration=0 + error event,
+                            │ server không gửi CORS header)
+┌───────────────────────────▼───────────────────────────────────────┐
+│ Cấp 2: reloadWithoutCors()                                        │
+│   → Reload <audio> KHÔNG set crossOrigin                          │
+│   → Audio phát được nhưng KHÔNG thể attach AudioWorklet đọc       │
+│     sample (tainted source) → Silence Skipping bị vô hiệu hóa    │
+│     cho track này, phát qua HTML5 <audio> thuần                  │
+└───────────────────────────┬───────────────────────────────────────┘
+                            │ AudioContext chuyển 'suspended' /
+                            │ 'interrupted' (iOS backgrounding)
+┌───────────────────────────▼───────────────────────────────────────┐
+│ Cấp 3: switchToFallback()                                          │
+│   → Ngắt hoàn toàn khỏi Web Audio pipeline, phát trực tiếp qua    │
+│     HTML5 <audio> element (đảm bảo audio không bị treo khi app   │
+│     chạy nền trên iOS Safari — đúng tinh thần BR-XD-001)          │
+│   → restoreWebAudio() được gọi khi tab visible trở lại, thử       │
+│     khôi phục lại pipeline Web Audio đầy đủ (Cấp 1) nếu khả dụng │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Tác động tới Business Rules:** Cấp 2 và Cấp 3 đồng nghĩa Silence Skipping (BR-SS-*) có thể tạm thời không khả dụng cho một số nguồn RSS không hỗ trợ CORS hoặc khi thiết bị chạy nền — đây là đánh đổi có chủ đích để ưu tiên tính liên tục phát nhạc (Playback Continuity) hơn tính năng phụ trợ, phù hợp với ưu tiên Must-have (F04 Playback Core) > Should-have (F05 Silence Skipping) tại PRD §6.
 
 ---
 
@@ -892,7 +930,7 @@ interface AppError {
 
 # 7. Testing Specification
 
-> **Nguyên tắc bắt buộc (Test-alongside Development):** Mọi function/method chứa logic nghiệp vụ được tạo mới PHẢI có unit test viết kèm trong cùng commit/PR — không hoãn lại. Một Feature (F0x) chỉ được đánh dấu hoàn thành khi toàn bộ unit test của các module thuộc feature đó đạt coverage target dưới đây VÀ pass qua Git Hook `pre-commit`/`pre-push` (Husky + lint-staged, xem [Tech_Spec_v1.1.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/Tech_Spec_v1.1.md) §3.4).
+> **Nguyên tắc bắt buộc (Test-alongside Development):** Mọi function/method chứa logic nghiệp vụ được tạo mới PHẢI có unit test viết kèm trong cùng commit/PR — không hoãn lại. Một Feature (F0x) chỉ được đánh dấu hoàn thành khi toàn bộ unit test của các module thuộc feature đó đạt coverage target dưới đây VÀ pass qua Git Hook `pre-commit`/`pre-push` (Husky + lint-staged, xem [Tech_Spec_v1.2.md](/docs/Tech_Spec_v1.2.md) §3.4).
 
 ## 7.1 Unit Tests
 

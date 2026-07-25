@@ -1,18 +1,19 @@
 # Technical Specification (Tech-Spec)
 
-# Distraction-Free Audio Learning Player
+# Distraction-Free Audio Learning Player (FocusCast)
 
-## Version 1.1
+## Version 1.2
 
 > **Tài liệu tham chiếu:**
 >
-> - [PRD_v1.0.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/PRD_v1.0.md)
-> - [SDD_v1.1.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/SDD_v1.1.md)
-> - [Business_Rules_v1.1.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/Business_Rules_v1.1.md)
-> - [Master_Plan_v1.1.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/Master_Plan_v1.1.md)
+> - [PRD_v1.1.md](/docs/PRD_v1.1.md)
+> - [SDD_v1.2.md](/docs/SDD_v1.2.md)
+> - [Business_Rules_v1.2.md](/docs/Business_Rules_v1.2.md)
+> - [Master_Plan_v1.2.md](/docs/Master_Plan_v1.2.md)
 
 > **Changelog:**
 >
+> - **v1.2** (2026-07-25) — **Release Review — sửa sai lệch quan trọng**: Adapter triển khai thực tế là **`@sveltejs/adapter-vercel`** (không phải `@sveltejs/adapter-node` như v1.1 quy định) — đã sửa §1.1, §3.1, §6.1, §6.2. Xác nhận route `/api/audio-proxy` **KHÔNG được triển khai** — đã loại khỏi Project Structure (§2.1) và Environment Variables (§6.3). Cập nhật Project Structure để khớp source code thực tế: `storage-monitor.ts` chuyển về `core/storage/` (dùng chung, không thuộc riêng Feature Settings); thêm `core/utils/feed-resolver.ts` (resolve Apple Podcasts URL → RSS qua iTunes Lookup API) và `core/utils/local-parser.ts` (đọc ID3/MP4 tag bằng `music-metadata-browser`); tách `export` thành Feature độc lập `features/export/` (không nhúng trong `bookmark/infrastructure/`) với `application/export-service.ts` và `ui/`. Bổ sung `music-metadata-browser` vào Production Dependencies (§3.1).
 > - **v1.1** (2026-07-23): Bổ sung §3.4 Git Hooks & Quality Gate (Husky + lint-staged + pre-commit/pre-push), thêm `husky`/`lint-staged` vào Development Dependencies, cập nhật Project Structure với các file cấu hình liên quan.
 > - **v1.0** (2026-07-23): Bản khởi tạo.
 
@@ -37,11 +38,13 @@
 │  RSS Parsing │  rss-parser (server-side)              │
 │  PWA         │  @vite-pwa/sveltekit + Workbox         │
 │  Testing     │  Vitest + Playwright                   │
-│  Adapter     │  @sveltejs/adapter-node                │
+│  Adapter     │  @sveltejs/adapter-vercel              │
 │  Linting     │  ESLint + Prettier                     │
-│  Deployment  │  Node.js runtime (Docker optional)     │
+│  Deployment  │  Vercel (Serverless Functions)          │
 └──────────────┴─────────────────────────────────────────┘
 ```
+
+> ⚠️ **Đã sửa v1.2:** Bản v1.0/v1.1 dự kiến `@sveltejs/adapter-node` (self-host Node.js runtime). Triển khai thực tế đã chọn **`@sveltejs/adapter-vercel`** (xác nhận trong `vite.config.ts`) và deploy lên Vercel — phù hợp hơn cho side-project/MVP nhờ zero-config CI/CD, không cần quản lý server. Xem §6 Deployment để biết chi tiết trade-off.
 
 ## 1.2 Stack Justification
 
@@ -285,19 +288,22 @@ export default {
 podcast-player/
 ├── docs/                           # Documentation
 │   ├── Problem_Definition_v1.0.md
-│   ├── Business_Rules_v1.1.md
-│   ├── PRD_v1.0.md
-│   ├── SDD_v1.1.md
-│   ├── Tech_Spec_v1.1.md
-│   └── Master_Plan_v1.1.md
+│   ├── Business_Rules_v1.2.md
+│   ├── PRD_v1.1.md
+│   ├── SDD_v1.2.md
+│   ├── Tech_Spec_v1.2.md
+│   └── Master_Plan_v1.2.md
 │
 ├── src/
 │   ├── lib/                        # Thư mục gốc chứa logic
 │   │   ├── core/                           # Shared / Core Infrastructure
 │   │   │   ├── db/
 │   │   │   │   ├── index.ts                # Dexie database singleton
+│   │   │   │   ├── crud.ts                 # CRUD helpers dùng chung
 │   │   │   │   ├── schema.ts               # Database interfaces
 │   │   │   │   └── migrations.ts           # Schema migrations
+│   │   │   ├── storage/                    # (v1.2) Storage Monitor — dùng chung, không thuộc riêng Feature nào
+│   │   │   │   └── storage-monitor.ts      # getStorageInfo/canDownloadOffline/autoCleanupFIFO
 │   │   │   ├── ui/                         # Shared UI Components
 │   │   │   │   ├── Toast.svelte
 │   │   │   │   ├── ConfirmDialog.svelte
@@ -307,9 +313,11 @@ podcast-player/
 │   │   │   │   ├── time.ts                 # Time formatting
 │   │   │   │   ├── uuid.ts                 # UUID generation
 │   │   │   │   ├── retry.ts                # Retry with backoff
-│   │   │   │   └── validators.ts           # Input validation
+│   │   │   │   ├── validators.ts           # Input validation
+│   │   │   │   ├── feed-resolver.ts        # (v1.2) Apple Podcasts URL → RSS URL qua iTunes Lookup API
+│   │   │   │   └── local-parser.ts         # (v1.2) Đọc ID3/MP4 tag (music-metadata-browser) cho Local File Import
 │   │   │   └── types/                      # Global Shared Types
-│   │   │       └── errors.ts
+│   │   │       └── errors.ts               # class AppError extends Error
 │   │   │
 │   │   └── features/                       # Feature-based Clean Architecture
 │   │       ├── playback/                   # Feature: Playback Engine
@@ -323,7 +331,7 @@ podcast-player/
 │   │       │   ├── application/            # Application Layer (State/UseCases)
 │   │       │   │   └── player.svelte.ts    # Player state (Runes)
 │   │       │   ├── infrastructure/         # Infrastructure Layer (External APIs)
-│   │       │   │   ├── engine.svelte.ts    # AudioContext & Nodes
+│   │       │   │   ├── engine.svelte.ts    # AudioContext & Nodes + CORS Hybrid Fallback (SDD §2.1.5)
 │   │       │   │   ├── media-session.ts    # Media Session API
 │   │       │   │   └── fallback.ts         # iOS Safari fallback
 │   │       │   └── index.ts                # Public feature API (Barrel file)
@@ -337,8 +345,14 @@ podcast-player/
 │   │       │   ├── application/
 │   │       │   │   └── bookmarks.svelte.ts # Bookmark state
 │   │       │   ├── infrastructure/
-│   │       │   │   ├── bookmark-service.ts # CRUD logic
-│   │       │   │   └── export-service.ts   # Markdown export
+│   │       │   │   └── bookmark-service.ts # CRUD logic
+│   │       │   └── index.ts
+│   │       │
+│   │       ├── export/                     # (v1.2) Feature độc lập — KHÔNG nhúng trong bookmark/
+│   │       │   ├── ui/
+│   │       │   │   └── +page.svelte        # (routes/export/+page.svelte) chọn scope + format
+│   │       │   ├── application/
+│   │       │   │   └── export-service.ts   # exportBookmarksMarkdown/exportAllBookmarksMarkdown/copyToClipboard/downloadFile
 │   │       │   └── index.ts
 │   │       │
 │   │       ├── library/                    # Feature: Source Management
@@ -352,23 +366,21 @@ podcast-player/
 │   │       │   │   └── library.svelte.ts   # Library state
 │   │       │   ├── infrastructure/
 │   │       │   │   ├── feed-client.ts      # Fetch feed logic
-│   │       │   │   └── offline-service.ts  # Download logic
+│   │       │   │   └── offline-service.ts  # Download logic (Phase 10.1 sẽ mở rộng UI trigger)
 │   │       │   └── index.ts
 │   │       │
 │   │       └── settings/                   # Feature: Configuration
 │   │           ├── ui/
-│   │           │   ├── StorageInfo.svelte
-│   │           │   ├── PlaybackSettings.svelte
-│   │           │   └── SilenceSkipSettings.svelte
+│   │           │   ├── StorageInfo.svelte  # Duy nhất đã dựng UI ở MVP
+│   │           │   ├── PlaybackSettings.svelte   # Placeholder — chưa dựng UI (Phase 10.3)
+│   │           │   └── SilenceSkipSettings.svelte # Placeholder — chưa dựng UI (Phase 10.3)
 │   │           ├── application/
 │   │           │   └── settings.svelte.ts
-│   │           ├── infrastructure/
-│   │           │   └── storage-monitor.ts
 │   │           └── index.ts
 │   │
 │   ├── routes/                             # SvelteKit Routing (UI Entrypoints)
 │   │   ├── +layout.svelte                  # App Shell + PlayerBar
-│   │   ├── +layout.ts
+│   │   ├── +layout.ts                      # export const ssr = false (CSR only)
 │   │   ├── +page.svelte                    # Home / Library
 │   │   │
 │   │   ├── podcast/
@@ -381,16 +393,18 @@ podcast-player/
 │   │   │   └── [trackId]/
 │   │   │       └── +page.svelte            # Track Bookmarks
 │   │   │
+│   │   ├── export/
+│   │   │   └── +page.svelte                # Export UI (Markdown MVP; JSON ở Phase 10.2)
+│   │   │
 │   │   ├── settings/
 │   │   │   └── +page.svelte
 │   │   │
 │   │   └── api/
-│   │       ├── feed/
-│   │       │   ├── +server.ts              # RSS Feed proxy
-│   │       │   └── refresh/
-│   │       │       └── +server.ts          # Feed refresh
-│   │       └── audio-proxy/
-│   │           └── +server.ts              # Audio CORS proxy
+│   │       └── feed/
+│   │           ├── +server.ts              # RSS Feed proxy
+│   │           └── refresh/
+│   │               └── +server.ts          # Feed refresh
+│   │           # ⚠️ /api/audio-proxy KHÔNG triển khai (xem SDD_v1.2.md §2.1.5)
 │   │
 │   ├── styles/
 │   │   ├── global.css              # CSS Custom Properties, reset
@@ -404,28 +418,34 @@ podcast-player/
 │   ├── icon-192.png
 │   ├── icon-512.png
 │   ├── icon-512-maskable.png
-│   ├── favicon.ico
-│   └── silence-skip-processor.js   # Pre-built worklet (fallback)
+│   ├── robots.txt
+│   └── silence-skip-processor.js   # AudioWorkletProcessor (loaded via addModule)
 │
 ├── tests/
 │   ├── unit/
-│   │   ├── audio-engine.test.ts
-│   │   ├── silence-skip.test.ts
-│   │   ├── bookmark-service.test.ts
-│   │   ├── export-service.test.ts
-│   │   ├── feed-parser.test.ts
-│   │   └── state-machine.test.ts
+│   │   ├── engine.spec.ts
+│   │   ├── silence-skip.spec.ts
+│   │   ├── bookmark-service.spec.ts
+│   │   ├── export-service.spec.ts
+│   │   ├── feed-client.spec.ts
+│   │   ├── player.spec.ts
+│   │   ├── db-schema.spec.ts
+│   │   └── utils.spec.ts
+│   ├── integration/
+│   │   ├── feed-flow.spec.ts
+│   │   ├── playback-flow.spec.ts
+│   │   └── mocks/                  # MSW handlers + server setup
 │   │
 │   └── e2e/
-│       ├── playback.spec.ts
-│       ├── bookmark.spec.ts
-│       └── feed.spec.ts
+│       ├── playback.e2e.ts
+│       ├── bookmark.e2e.ts
+│       └── feed.e2e.ts
 │
 ├── svelte.config.js
-├── vite.config.ts
+├── vite.config.ts                 # adapter: @sveltejs/adapter-vercel (v1.2)
 ├── tsconfig.json
 ├── eslint.config.js               # ESLint flat config (TypeScript + Svelte)
-├── .prettierrc                    # Prettier config
+├── prettier.config.js             # Prettier config
 ├── .lintstagedrc.json             # lint-staged config (chạy qua Husky pre-commit)
 ├── .husky/                        # Git Hooks (pre-commit, pre-push)
 │   ├── pre-commit                 # npx lint-staged
@@ -440,14 +460,15 @@ podcast-player/
 
 ## 3.1 Production Dependencies
 
-| Package                  | Version | Purpose                            | Size (gzip)     |
-| ------------------------ | ------- | ---------------------------------- | --------------- |
-| `@sveltejs/kit`          | `^2.x`  | Full-stack framework               | Core            |
-| `@sveltejs/adapter-node` | `^5.x`  | Node.js deployment adapter         | ~5 KB           |
-| `svelte`                 | `^5.x`  | UI framework                       | ~15 KB          |
-| `dexie`                  | `^4.x`  | IndexedDB wrapper                  | ~35 KB          |
-| `rss-parser`             | `^3.x`  | RSS/Atom feed parser (server only) | ~20 KB (server) |
-| `uuid`                   | `^10.x` | UUID v4 generation                 | ~2 KB           |
+| Package                    | Version | Purpose                                                             | Size (gzip)     |
+| -------------------------- | ------- | ------------------------------------------------------------------- | --------------- |
+| `@sveltejs/kit`            | `^2.x`  | Full-stack framework                                                | Core            |
+| `@sveltejs/adapter-vercel` | `^5.x`  | Vercel Serverless deployment adapter                                | ~5 KB           |
+| `svelte`                   | `^5.x`  | UI framework                                                        | ~15 KB          |
+| `dexie`                    | `^4.x`  | IndexedDB wrapper                                                   | ~35 KB          |
+| `rss-parser`               | `^3.x`  | RSS/Atom feed parser (server only)                                  | ~20 KB (server) |
+| `music-metadata-browser`   | `^2.x`  | Đọc ID3/MP4 tag (title/artist/cover/duration) cho Local File Import | ~40 KB          |
+| `uuid`                     | `^10.x` | UUID v4 generation                                                  | ~2 KB           |
 
 **Total client bundle estimate:** ~70 KB gzip (excl. app code)
 
@@ -989,21 +1010,22 @@ async function initAudioPipeline(audioElement: HTMLAudioElement) {
 
 ## 6.1 Environment Requirements
 
-| Component   | Requirement                                                                   |
-| ----------- | ----------------------------------------------------------------------------- |
-| **Runtime** | Node.js 20+ LTS                                                               |
-| **Memory**  | ≥ 512 MB                                                                      |
-| **Disk**    | ≥ 1 GB (for audio proxy caching)                                              |
-| **HTTPS**   | Required (Web Audio API, Media Session API, Service Worker đều yêu cầu HTTPS) |
+| Component   | Requirement                                                                                              |
+| ----------- | -------------------------------------------------------------------------------------------------------- |
+| **Runtime** | Vercel Serverless Functions (Node.js 20.x runtime target)                                                |
+| **Memory**  | Mặc định giới hạn Vercel theo plan — không cần dung lượng disk lớn vì audio proxy không triển khai       |
+| **HTTPS**   | Required (Web Audio API, Media Session API, Service Worker đều yêu cầu HTTPS) — Vercel cung cấp mặc định |
 
 ## 6.2 Deployment Options
 
-| Option               | Ưu điểm                                  | Nhược điểm                                    | Phù hợp khi               |
-| -------------------- | ---------------------------------------- | --------------------------------------------- | ------------------------- |
-| **Vercel**           | Zero-config, auto-scaling, free tier     | Serverless cold start, API route timeout 10s  | Side project, low traffic |
-| **Railway / Render** | Full Node.js runtime, persistent process | Cần cấu hình                                  | Production, stable        |
-| **Docker + VPS**     | Full control, no limits                  | Cần ops knowledge                             | Self-hosted, privacy      |
-| **Cloudflare Pages** | Edge deployment, fast                    | Cần adapter-cloudflare, API route limitations | Global users              |
+> **Đã chọn: Vercel** (xác nhận qua `vite.config.ts` dùng `@sveltejs/adapter-vercel` và thư mục `.vercel/` trong project root). Bảng dưới đây giữ lại các lựa chọn thay thế đã cân nhắc để tham khảo khi cần thay đổi hạ tầng.
+
+| Option                    | Ưu điểm                                                  | Nhược điểm                                         | Phù hợp khi                         |
+| ------------------------- | -------------------------------------------------------- | -------------------------------------------------- | ----------------------------------- |
+| **Vercel** ✅ (đang dùng) | Zero-config, auto-scaling, free tier, tích hợp Git CI/CD | Serverless cold start, API route timeout theo plan | Side project, low-to-medium traffic |
+| **Railway / Render**      | Full Node.js runtime, persistent process                 | Cần cấu hình, chi phí cố định                      | Production, stable                  |
+| **Docker + VPS**          | Full control, no limits                                  | Cần ops knowledge                                  | Self-hosted, privacy                |
+| **Cloudflare Pages**      | Edge deployment, fast                                    | Cần adapter-cloudflare, API route limitations      | Global users                        |
 
 ## 6.3 Environment Variables
 
@@ -1012,18 +1034,14 @@ async function initAudioPipeline(audioElement: HTMLAudioElement) {
 # Không có biến bắt buộc — hệ thống là self-contained.
 # Các biến dưới đây là optional:
 
-# Server config
-PORT=3000
-HOST=0.0.0.0
+# Server config (Vercel tự inject phần lớn qua process.env khi build)
 ORIGIN=https://focuscast.app
-
-# Audio proxy config
-AUDIO_PROXY_ENABLED=true
-AUDIO_PROXY_MAX_SIZE_MB=500
 
 # Logging
 LOG_LEVEL=info
 ```
+
+> **Lưu ý (v1.2):** Các biến `AUDIO_PROXY_ENABLED`/`AUDIO_PROXY_MAX_SIZE_MB` của bản v1.1 đã bị loại bỏ — route `/api/audio-proxy` không được triển khai (xem [SDD_v1.2.md](/docs/SDD_v1.2.md) §2.1.5 CORS Hybrid Fallback Strategy).
 
 ---
 
@@ -1263,4 +1281,4 @@ export function downloadFile(content: string, filename: string): void {
 
 > **Tổng cộng: Tech-Spec v1.1 | 11 sections (+ §3.4 Git Hooks & Quality Gate) | Sẵn sàng cho implementation.**
 >
-> Tham chiếu: [PRD_v1.0.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/PRD_v1.0.md) · [SDD_v1.1.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/SDD_v1.1.md) · [Master_Plan_v1.1.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/Master_Plan_v1.1.md)
+> Tham chiếu: [PRD_v1.1.md](/docs/PRD_v1.1.md) · [SDD_v1.2.md](/docs/SDD_v1.2.md) · [Master_Plan_v1.2.md](/docs/Master_Plan_v1.2.md)

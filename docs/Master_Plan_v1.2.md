@@ -2,18 +2,19 @@
 
 # Distraction-Free Audio Learning Player (FocusCast)
 
-## Version 1.1
+## Version 1.2
 
 > **Tài liệu tham chiếu:**
 >
-> - [Problem_Definition_v1.0.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/Problem_Definition_v1.0.md)
-> - [Business_Rules_v1.1.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/Business_Rules_v1.1.md)
-> - [PRD_v1.0.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/PRD_v1.0.md)
-> - [SDD_v1.1.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/SDD_v1.1.md)
-> - [Tech_Spec_v1.1.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/Tech_Spec_v1.1.md)
+> - [Problem_Definition_v1.0.md](/docs/Problem_Definition_v1.0.md)
+> - [Business_Rules_v1.2.md](/docs/Business_Rules_v1.2.md)
+> - [PRD_v1.1.md](/docs/PRD_v1.1.md)
+> - [SDD_v1.2.md](/docs/SDD_v1.2.md)
+> - [Tech_Spec_v1.2.md](/docs/Tech_Spec_v1.2.md)
 
 > **Changelog:**
 >
+> - **v1.2** (2026-07-25) — **Release Review**: Đánh dấu **Phase 0 → Phase 9 đã HOÀN THÀNH** (MVP released). Bổ sung Section 1.1 "Trạng thái triển khai thực tế" đối chiếu từng Phase với source code, ghi nhận các sai lệch so với kế hoạch gốc (adapter triển khai là `adapter-vercel` thay vì `adapter-node`; route `/api/audio-proxy` không triển khai — engine tự xử lý CORS fallback; Settings UI mới có Storage Info, chưa có Playback/Silence-Skip settings UI; nút "Download for Offline" cho RSS Episode chưa nối UI). **Viết lại toàn bộ Phase 10 thành Master Plan chi tiết cho v2.0**, chia thành 6 sub-phase (10.1 → 10.6) bám sát Business Rules mới BR-P2-* tại [Business_Rules_v1.2.md](/docs/Business_Rules_v1.2.md) §12. Bổ sung Risk Register cho Phase 2.
 > - **v1.1** (2026-07-23): Bổ sung chính sách Git Hooks (Husky + lint-staged + pre-commit/pre-push), quy tắc bắt buộc **Test-alongside Development** (mỗi function mới phải có unit test kèm theo, mỗi Feature hoàn thành phải có unit test bao phủ). Đồng bộ version với Tech-Spec v1.1 và SDD v1.1.
 > - **v1.0** (2026-07-23): Bản khởi tạo — tổng hợp từ Problem Definition, Business Rules v1.1, PRD v1.0, SDD v1.0, Tech-Spec v1.0.
 
@@ -33,6 +34,28 @@
 | **Stack chính**         | SvelteKit 2.x + Svelte 5 (Runes) + TypeScript, Dexie.js (IndexedDB), Web Audio API (AudioWorklet), rss-parser (server-side), @vite-pwa/sveltekit |
 | **Kiến trúc**           | Feature-Based Clean Architecture (Playback / Bookmark / Library / Settings / Core)                                                               |
 | **Nguyên tắc bất biến** | 100% Local-First (BR-DAT-001), Ad-free by design (BR-PB-006), Timestamp luôn tham chiếu audio gốc (BR-SS-004)                                    |
+| **Trạng thái hiện tại** | 🚀 **MVP đã Release** — Phase 0 → Phase 9 hoàn thành. Đang lên kế hoạch **Phase 10 (v2.0)** — xem Section 5, Phase 10.                           |
+
+---
+
+## 1.1 Trạng thái triển khai thực tế (Post-Release Status Review — 2026-07-25)
+
+Bảng dưới đối chiếu từng Phase của kế hoạch gốc với source code thực tế tại thời điểm release, dùng làm căn cứ cho các cập nhật tài liệu trong lần rà soát này:
+
+| Phase                              | Trạng thái                                                 | Ghi chú sai lệch / bổ sung so với kế hoạch gốc                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ---------------------------------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Phase 0 — Setup & Tooling          | ✅ Hoàn thành                                              | Husky + lint-staged hoạt động đúng kế hoạch (`.husky/`, `.lintstagedrc.json`).                                                                                                                                                                                                                                                                                                                                                                                             |
+| Phase 1 — Foundation               | ✅ Hoàn thành                                              | Schema Dexie khớp 100% kế hoạch (5 object stores, đúng PK/index). Riêng `types/errors.ts` gói trong `class AppError extends Error` thay vì interface thuần.                                                                                                                                                                                                                                                                                                                |
+| Phase 2 — Playback Core            | ✅ Hoàn thành                                              | State machine, Speed Control (0.5x–3.0x), Position Recovery (5s periodic + event-driven + 3s rewind) đúng đặc tả.                                                                                                                                                                                                                                                                                                                                                          |
+| Phase 3 — Silence Skipping         | ✅ Hoàn thành                                              | `static/silence-skip-processor.js` đúng thuật toán RMS/dB, buffer zone 3s, crossfade 50ms. Tham số hỗ trợ cập nhật runtime qua `updateOptions` message (chưa có UI cấu hình nâng cao — dự kiến P2/Could-have gốc).                                                                                                                                                                                                                                                         |
+| Phase 4 — Source Management        | ✅ Hoàn thành + 🆕 mở rộng                                 | Ngoài RSS + Local File theo kế hoạch, đã bổ sung **`feed-resolver.ts`** (resolve link Apple Podcasts → RSS URL qua iTunes Lookup API) và **`music-metadata-browser`** để đọc ID3/MP4 tag cho Local File — cả hai không có trong Tech-Spec gốc, nay đã bổ sung vào Tech-Spec v1.2.                                                                                                                                                                                          |
+| Phase 5 — Bookmark                 | ✅ Hoàn thành                                              | CRUD, dedup (≤1s), orphan preserve, max 5000 ký tự — khớp đầy đủ Business Rules.                                                                                                                                                                                                                                                                                                                                                                                           |
+| Phase 6 — Media Session & Fallback | ✅ Hoàn thành                                              | Đã hiện thực hoá cơ chế CORS hybrid (`crossOrigin=anonymous` → fallback không CORS → HTML5 `<audio>` thuần khi cần) — chi tiết hơn dự kiến ban đầu, đã bổ sung vào SDD v1.2.                                                                                                                                                                                                                                                                                               |
+| Phase 7 — Export, Storage, Polish  | ✅ Hoàn thành (Export/Storage) · 🟡 Một phần (Settings UI) | Export chỉ hỗ trợ Markdown (tải `.md`/`.txt` cùng nội dung) — JSON/CSV chưa làm, đẩy sang Phase 10 (BR-P2-EXP-001). Settings UI mới có `StorageInfo.svelte`; `PlaybackSettings.svelte`/`SilenceSkipSettings.svelte` chưa dựng (đã là placeholder tùy chọn trong kế hoạch gốc).                                                                                                                                                                                             |
+| Phase 8 — Testing & QA             | ✅ Hoàn thành                                              | Vitest (unit) + Playwright (E2E) + MSW + fake-indexeddb đầy đủ theo tất cả feature chính (xem `tests/unit/*.spec.ts`, `tests/integration/*.spec.ts`, `tests/e2e/*.e2e.ts`).                                                                                                                                                                                                                                                                                                |
+| Phase 9 — PWA & Deployment         | ✅ Hoàn thành                                              | ⚠️ **Sai lệch quan trọng**: dùng **`@sveltejs/adapter-vercel`** (deploy Vercel) thay vì `@sveltejs/adapter-node` như Tech-Spec v1.1 quy định — đã cập nhật Tech-Spec v1.2 §1.1/§6.2 để phản ánh đúng. Route `/api/audio-proxy` (CORS fallback) trong SDD gốc **không được triển khai** — thay vào đó Audio Engine tự xử lý hybrid CORS fallback ở phía client (xem Phase 6 note). PWA icons (`icon-192.png`, `icon-512.png`, `icon-512-maskable.png`) đã có tại `static/`. |
+
+**Hạng mục còn tồn đọng chuyển sang Phase 10 (v2.0):** nút "Download for Offline" cho RSS Episode (BR-P2-OFF-001), Export JSON (BR-P2-EXP-001), mở rộng Settings UI.
 
 ---
 
@@ -69,7 +92,7 @@ Mọi quyết định kỹ thuật trong quá trình build PHẢI tuân thủ c�
 5. **Không bypass hook** bằng `git commit --no-verify` trừ trường hợp khẩn cấp đã được xác nhận rõ ràng.
 6. **CI song song:** Dù đã có Git hook cục bộ, CI (Phase 8) vẫn chạy lại toàn bộ lint + test để tránh rủi ro hook bị bỏ qua trên máy dev.
 
-Chi tiết cấu hình kỹ thuật (`.husky/pre-commit`, `lint-staged` config, `package.json` scripts): xem [Tech_Spec_v1.1.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/Tech_Spec_v1.1.md) §3.4.
+Chi tiết cấu hình kỹ thuật (`.husky/pre-commit`, `lint-staged` config, `package.json` scripts): xem [Tech_Spec_v1.2.md](/docs/Tech_Spec_v1.2.md) §3.4.
 
 ---
 
@@ -101,7 +124,7 @@ flowchart TB
     SW -.-> DB
 ```
 
-Chi tiết đầy đủ: xem [SDD_v1.1.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/SDD_v1.1.md) §1 (kiến trúc), §2 (module spec), §5 (data flow) và [Tech_Spec_v1.1.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/Tech_Spec_v1.1.md) §2 (project structure), §5 (AudioWorklet), §3.4 (Git Hooks & Quality Gate).
+Chi tiết đầy đủ: xem [SDD_v1.2.md](/docs/SDD_v1.2.md) §1 (kiến trúc), §2 (module spec), §5 (data flow) và [Tech_Spec_v1.2.md](/docs/Tech_Spec_v1.2.md) §2 (project structure), §5 (AudioWorklet), §3.4 (Git Hooks & Quality Gate).
 
 ---
 
@@ -121,7 +144,7 @@ Chi tiết đầy đủ: xem [SDD_v1.1.md](file:///Users/thinhquoc/Desktop/Persi
 | F10     | Background Audio & Fallback | P0       | BR-XD-001                | `features/playback/infrastructure/fallback.ts`                     |
 | F11     | Data Storage & Management   | P0       | BR-DAT-001 → 004         | `core/db`, `features/settings`                                     |
 
-> Ghi chú: BR-EXP-* và BR-XD-* không được trích trong bản Business_Rules_v1.1.md đã đọc đầy đủ ở phần đầu (chỉ đọc tới BR-MS-001); PRD/SDD tham chiếu các mã này cho Export và Cross-cutting (performance/background). Khi implement, đối chiếu lại đầy đủ Business_Rules_v1.1.md §8/§9 (Export, Cross-cutting) trước khi code F08/F09/F10 để đảm bảo không lệch rule.
+> Ghi chú (đã xác nhận post-release): F08/F09/F10 đã được implement đầy đủ đúng theo BR-EXP-* (§8) và BR-XD-* (§9) của [Business_Rules_v1.2.md](/docs/Business_Rules_v1.2.md). Export hiện chỉ hỗ trợ Markdown (BR-EXP-001 cập nhật) — mở rộng JSON ở Phase 10 (BR-P2-EXP-001).
 
 ---
 
@@ -396,12 +419,162 @@ Theo Tech-Spec §7 và SDD §7:
 
 ---
 
-## Phase 10 — Phase 2 Roadmap (v2.0, tương lai — chỉ định hướng, không triển khai trong MVP)
+## Phase 10 — v2.0 Roadmap (Master Plan chi tiết cho Out-of-Scope Features)
 
-- Nâng Offline Download (F03) từ P1 lên P0 mặc định bật.
-- Cho phép user-adjustable Silence Skipping threshold qua UI (hiện là P2/Could-have).
-- Waveform visualization (dùng `AnalyserNode` đã dự trù trong Tech-Spec §1.2.2).
-- Keyboard shortcuts chuyên sâu.
+> **Trạng thái:** 🟦 Chưa bắt đầu — kế hoạch chi tiết cho giai đoạn kế tiếp sau MVP release.
+> **Căn cứ:** Phân tích chuyên sâu tại [Business_Rules_v1.2.md](/docs/Business_Rules_v1.2.md) §12 (Domain `P2`, 18 Business Rules mới BR-P2-\*).
+> **Nguyên tắc bất biến áp dụng cho toàn bộ Phase 10:** không phá vỡ 3 nguyên tắc tại Business_Rules §12.1 (Local-First mặc định, Ad-free by design, Offline hiện có phải luôn hoạt động dù không bật tính năng mới nào).
+
+Phase 10 được chia thành **6 sub-phase độc lập, ưu tiên theo giá trị/rủi ro** — không nhất thiết làm tuần tự, nhưng khuyến nghị thứ tự dưới đây vì mỗi sub-phase sau tận dụng hạ tầng của sub-phase trước.
+
+```mermaid
+flowchart LR
+    P10_1["10.1\nHoàn thiện Offline DL"] --> P10_2["10.2\nExport JSON + Backup/Restore"]
+    P10_2 --> P10_3["10.3\nSettings UI mở rộng"]
+    P10_3 --> P10_4["10.4\nCloud Sync (Opt-in, E2EE)"]
+    P10_4 --> P10_5["10.5\nAI Assist (Opt-in, on-device ưu tiên)"]
+    P10_2 --> P10_6["10.6\nSharing Bookmark tĩnh (có điều kiện)"]
+    P10_4 --> P10_6
+```
+
+---
+
+### Sub-phase 10.1 — Hoàn thiện Offline Download (BR-P2-OFF-001, BR-P2-OFF-002)
+
+**Mục tiêu:** Đóng nốt phần còn dang dở duy nhất của MVP — cho phép tải Episode RSS về offline chủ động, không cần phát trước.
+
+**Effort sizing:** S (Small) — hạ tầng (`storage-monitor.ts`, schema `Track.offlineAvailable/audioBlob`) đã có sẵn 100%, chỉ cần nối UI + luồng tải Blob.
+
+**Checklist:**
+
+- [ ] Thêm nút "Tải xuống" trên `EpisodeCard.svelte` cho Track có `sourceType: 'rss'` và `offlineAvailable: false`.
+- [ ] Viết `downloadEpisodeForOffline(trackId)` trong `features/library/infrastructure/offline-service.ts`: `fetch(audioUrl)` → track progress qua `ReadableStream` reader + `Content-Length` header → lưu Blob vào `db.tracks.update(trackId, { audioBlob, offlineAvailable: true, fileSize })`.
+- [ ] Hỗ trợ hủy download đang chạy bằng `AbortController`; dọn dẹp Blob dở dang nếu hủy.
+- [ ] Gọi `canDownloadOffline()` (đã có) TRƯỚC khi bắt đầu — chặn nếu storage `critical` (BR-DAT-004).
+- [ ] Khi phát Track có `audioBlob`, ưu tiên tạo `URL.createObjectURL(audioBlob)` thay vì fetch `audioUrl` qua network (giữ đúng BR-SRC-005 mục 5).
+- [ ] Thêm nút "Xóa bản offline" (giữ Track/Bookmark, chỉ xóa `audioBlob`, set `offlineAvailable: false`).
+- [ ] Màn hình "Offline Downloads" (route mới `settings/offline` hoặc section trong `/settings`): liệt kê toàn bộ Track có `offlineAvailable = true`, dung lượng từng Track, tổng dung lượng, action xóa hàng loạt (BR-P2-OFF-002).
+- [ ] Unit test: `offline-service.spec.ts` (download success/fail/abort, quota check, cleanup).
+- [ ] E2E test: download 1 episode nhỏ → tắt network (route interception) → phát lại thành công từ Blob.
+
+**Exit Criteria:** Tải 1 Episode RSS về offline qua UI → thấy progress → bật airplane mode/offline → phát lại không lỗi; xóa bản offline → Track/Bookmark vẫn còn.
+
+---
+
+### Sub-phase 10.2 — Export JSON & Backup/Restore toàn bộ dữ liệu (BR-P2-EXP-001, BR-P2-EXP-002)
+
+**Mục tiêu:** Bổ sung format Export lập trình được (JSON) và cơ chế Backup/Restore Local-First — giải quyết nhu cầu "chuyển dữ liệu sang máy khác" mà KHÔNG cần Cloud Sync.
+
+**Effort sizing:** S–M.
+
+**Checklist:**
+
+- [ ] `export-service.ts`: thêm `exportBookmarksJson(trackId | 'all')` trả về JSON đúng field gốc (`id, trackId, timestampStart, timestampEnd, note, createdAt, updatedAt`).
+- [ ] UI `export/+page.svelte`: thêm lựa chọn format `Markdown | JSON` bên cạnh scope `Single Track | All Tracks` hiện có.
+- [ ] Module mới `features/settings/infrastructure/backup-service.ts`:
+  - `exportFullBackup()`: gom `podcasts`, `tracks` (loại field `audioBlob`), `bookmarks`, `settings` → 1 file `focuscast-backup-<date>.json`.
+  - `importFullBackup(file)`: validate schema version, merge theo chiến lược "giữ bản mới hơn theo `updatedAt`", KHÔNG bao giờ ghi đè Bookmark bằng bản cũ hơn (an toàn dữ liệu).
+- [ ] UI trong Settings: nút "Sao lưu dữ liệu" (download) và "Khôi phục từ file" (upload + preview số lượng record trước khi confirm import).
+- [ ] Unit test: round-trip export → import → so sánh dữ liệu khớp 100% (trừ audio Blob).
+
+**Exit Criteria:** Export toàn bộ dữ liệu → xóa IndexedDB (dev tool) → import lại file backup → toàn bộ Podcast/Track metadata/Bookmark/Settings khôi phục đúng.
+
+---
+
+### Sub-phase 10.3 — Mở rộng Settings UI (nối tiếp Phase 7 còn dang dở)
+
+**Mục tiêu:** Hoàn thiện `PlaybackSettings.svelte`, `SilenceSkipSettings.svelte` (đã có placeholder trong kế hoạch gốc Phase 7 nhưng chưa dựng UI), cho phép user tự chỉnh `amplitude_threshold`/`min_silence_duration` trong dải cho phép (BR-SS-002).
+
+**Effort sizing:** S.
+
+**Checklist:**
+
+- [ ] `SilenceSkipSettings.svelte`: 2 slider cho `amplitudeThresholdDb` (-60dB → -20dB) và `minSilenceDurationMs` (100ms → 1000ms), gọi `engine.updateSilenceSkipOptions()` (message `updateOptions` đã hỗ trợ sẵn ở AudioWorklet).
+- [ ] `PlaybackSettings.svelte`: cấu hình default playback speed, default post-bookmark behavior (`CONTINUE`/`PAUSE_FOR_NOTE` — di chuyển từ nơi khác nếu đang ẩn, hiện rule đã có nhưng chưa chắc có UI riêng).
+- [ ] Theme toggle (Light/Dark) nếu Business/Design muốn — không có trong BR gốc, coi là tùy chọn UX, không bắt buộc.
+- [ ] Unit test cho settings-service khi đọc/ghi các key mới.
+
+**Exit Criteria:** Chỉnh threshold trong Settings → Silence Skipping phản ứng ngay theo giá trị mới (≤100ms, giữ đúng BR-XD-002) mà không cần tải lại Track.
+
+---
+
+### Sub-phase 10.4 — Cloud Sync (Opt-in, E2EE) — BR-P2-CLOUD-001 → 005
+
+**Mục tiêu:** Cho phép đồng bộ Bookmark/Settings/PlaybackState giữa nhiều thiết bị mà không vi phạm Local-First, thông qua mã hóa đầu-cuối.
+
+**Effort sizing:** L (Large) — cần backend mới, quản lý khóa, xử lý conflict.
+
+**Kiến trúc đề xuất:**
+
+```text
+Client A ──(encrypt local, key derived from passphrase)──► Sync Server (SvelteKit API + DB, chỉ lưu ciphertext) ◄──(decrypt local)── Client B
+```
+
+**Checklist:**
+
+- [ ] Thiết kế schema server tối giản: 1 bảng `sync_blobs` (userId, deviceId, encryptedPayload, updatedAt) — server KHÔNG có schema hiểu được nội dung (Zero-Knowledge).
+- [ ] Chọn thư viện mã hóa client-side (Web Crypto API — AES-GCM, khóa dẫn xuất bằng PBKDF2/Argon2 từ passphrase người dùng).
+- [ ] Luồng đăng ký/đăng nhập tối giản (email + passphrase, KHÔNG lưu passphrase, chỉ lưu password hash cho auth riêng biệt với encryption key).
+- [ ] `sync-service.ts`: `pushLocalChanges()` (diff theo `updatedAt` từ lần sync trước) + `pullRemoteChanges()` + merge theo BR-P2-CLOUD-004 (Last-Write-Wins + giữ lịch sử 1 bản).
+- [ ] UI Settings: toggle "Bật Cloud Sync" mặc định TẮT (BR-P2-CLOUD-001), màn hình nhập passphrase với cảnh báo rõ ràng "Nếu quên passphrase, dữ liệu đã mã hóa KHÔNG thể khôi phục".
+- [ ] Cơ chế xóa tài khoản: xóa `sync_blobs` phía server trong ≤30 ngày, không đụng tới IndexedDB local (BR-P2-CLOUD-005).
+- [ ] Rate limiting + auth trên API sync (bảo mật, tránh abuse).
+- [ ] Unit + integration test cho encrypt/decrypt round-trip, conflict resolution, revoke account.
+- [ ] Threat model riêng cho Cloud Sync (bổ sung Risk Register §6 Phase 10 bên dưới).
+
+**Exit Criteria:** Bật Cloud Sync trên Thiết bị A, tạo Bookmark → thiết bị B (cùng tài khoản, cùng passphrase) nhận được Bookmark trong thời gian hợp lý; server-side dump database không đọc được nội dung note (kiểm chứng bằng cách inspect DB thủ công).
+
+---
+
+### Sub-phase 10.5 — AI Assist (Opt-in, On-device ưu tiên) — BR-P2-AI-001 → 004
+
+**Mục tiêu:** Bổ sung 2 tính năng AI phụ trợ có ranh giới rõ ràng: Transcribe cục bộ quanh Bookmark, và Tóm tắt Note do người dùng viết.
+
+**Effort sizing:** L — cần tích hợp model (on-device hoặc API), UI mới, quản lý chi phí/quyền riêng tư.
+
+**Checklist:**
+
+- [ ] Đánh giá & chọn model on-device khả thi chạy trong trình duyệt (ví dụ Whisper tiny/base qua WASM/ONNX Runtime Web) cho tính năng Transcribe đoạn ngắn.
+- [ ] `ai-service.ts`: `transcribeSegment(trackId, startSec, endSec)` — trích đoạn audio ±30s (cấu hình 15-60s) quanh Bookmark, chạy model cục bộ; fallback gọi API cloud (OpenAI/Whisper API) CHỈ khi user bật "Dùng AI Cloud" tường minh trong Settings.
+- [ ] `summarizeNotes(bookmarkIds[])` — chỉ nhận input là các `note` text đã có, gọi model tóm tắt (on-device nhỏ hoặc API cloud tùy lựa chọn), gắn prefix `[AI Summary]` vào kết quả khi hiển thị/export (BR-P2-AI-004).
+- [ ] UI: nút "Transcribe đoạn này" trên `BookmarkCard`, hiển thị kết quả có nhãn `[AI Transcript]`; nút "Tóm tắt bằng AI" trên trang Export trước khi xuất.
+- [ ] Toggle "Bật AI Assist" mặc định TẮT trong Settings + màn hình giải thích rõ chế độ on-device vs cloud, chi phí (nếu cloud), dữ liệu nào được gửi đi.
+- [ ] Đo lường chi phí API nếu dùng cloud (giới hạn số lần gọi/tháng nếu cần kiểm soát chi phí vận hành).
+- [ ] Unit test: transcribe trả về đúng đoạn giới hạn thời gian, summary chỉ nhận input text (không tự ý lấy audio).
+
+**Exit Criteria:** Bật AI Assist (on-device) → bấm "Transcribe đoạn này" trên 1 Bookmark → nhận text transcript trong thời gian hợp lý, hiển thị đúng nhãn nguồn AI; tắt AI Assist → toàn bộ nút liên quan ẩn/disable, app hoạt động y hệt MVP.
+
+---
+
+### Sub-phase 10.6 — Chia sẻ Bookmark tĩnh (Static Sharing, có điều kiện) — BR-P2-SOC-002
+
+**Mục tiêu:** Cho phép chia sẻ 1 Bookmark cụ thể ra ngoài app dưới dạng nội dung tĩnh, KHÔNG xây dựng bất kỳ hạ tầng mạng xã hội nào.
+
+**Effort sizing:** M — phụ thuộc Sub-phase 10.4 nếu chọn phương án link (cần nơi lưu tạm), hoặc S nếu chỉ xuất ảnh/Markdown để tự gửi thủ công (không cần backend).
+
+**Checklist (ưu tiên phương án không cần backend trước):**
+
+- [ ] Phương án A (khuyến nghị làm trước, không cần Cloud): "Xuất ảnh chia sẻ" — render 1 Bookmark (title Episode, timestamp, note, tên Podcast) thành ảnh PNG (Canvas API) để chia sẻ qua Zalo/Message/Slack.
+- [ ] Phương án B (chỉ làm nếu đã có Sub-phase 10.4): "Link chia sẻ tạm thời" — lưu snapshot Bookmark (đã mã hóa hoặc public tùy quyết định) lên sync server, sinh link có hạn 30 ngày, có thể revoke.
+- [ ] Đảm bảo tuyệt đối KHÔNG có: public profile, danh sách người theo dõi, feed hoạt động (BR-P2-SOC-001 vẫn có hiệu lực).
+- [ ] Unit test cho việc tạo link/ảnh chính xác nội dung Bookmark.
+
+**Exit Criteria:** Chọn 1 Bookmark → "Chia sẻ" → nhận được ảnh hoặc link tĩnh chứa đúng nội dung, không có bất kỳ liên kết nào tới hồ sơ người dùng công khai.
+
+---
+
+### Tổng hợp Effort & Ưu tiên Phase 10
+
+| Sub-phase | Tên                          | Effort             | Ưu tiên                                                           | Business Rules      |
+| --------- | ---------------------------- | ------------------ | ----------------------------------------------------------------- | ------------------- |
+| 10.1      | Hoàn thiện Offline Download  | S                  | 🟢 Cao nhất (nợ kỹ thuật từ MVP)                                  | BR-P2-OFF-001, 002  |
+| 10.2      | Export JSON + Backup/Restore | S–M                | 🟢 Cao                                                            | BR-P2-EXP-001, 002  |
+| 10.3      | Settings UI mở rộng          | S                  | 🟢 Cao                                                            | (nối tiếp Phase 7)  |
+| 10.4      | Cloud Sync (Opt-in, E2EE)    | L                  | 🟡 Trung bình — theo nhu cầu thực tế người dùng                   | BR-P2-CLOUD-001→005 |
+| 10.5      | AI Assist (Opt-in)           | L                  | 🟡 Trung bình — thử nghiệm, đo lường giá trị trước khi đầu tư sâu | BR-P2-AI-001→004    |
+| 10.6      | Sharing Bookmark tĩnh        | S (ảnh) / M (link) | 🟡 Thấp-Trung bình                                                | BR-P2-SOC-002       |
+| —         | Recommendation Algorithm     | —                  | 🔴 Không triển khai (vĩnh viễn)                                   | BR-P2-REC-001       |
+| —         | Social Network đầy đủ        | —                  | 🔴 Không triển khai (vĩnh viễn)                                   | BR-P2-SOC-001       |
 
 ---
 
@@ -424,6 +597,17 @@ Bổ sung theo Tech-Spec §7.1 (threat model kỹ thuật):
 | Malicious audio file      | Validate MIME type trước khi xử lý (chỉ MP3/M4A/WAV/OGG)       | Phase 4       |
 | IndexedDB data loss       | Atomic transactions (Dexie)                                    | Phase 1       |
 | Audio proxy abuse         | Rate limit, max file size, MIME whitelist                      | Phase 4, 9    |
+
+## 6.1 Risk Register bổ sung cho Phase 10 (v2.0)
+
+| #   | Risk                                                                 | Likelihood | Impact                     | Mitigation                                                                                                | Sub-phase  |
+| --- | -------------------------------------------------------------------- | ---------- | -------------------------- | --------------------------------------------------------------------------------------------------------- | ---------- |
+| R6  | Cloud Sync server bị xâm nhập, lộ ciphertext                         | Trung bình | Thấp (nếu E2EE đúng chuẩn) | E2EE bắt buộc (BR-P2-CLOUD-002), server Zero-Knowledge, audit bảo mật trước khi ra mắt public             | 10.4       |
+| R7  | Người dùng quên passphrase Cloud Sync → mất khả năng giải mã         | Cao        | Cao                        | Cảnh báo rõ ràng trước khi bật, cân nhắc cơ chế recovery-key riêng (trade-off bảo mật vs UX)              | 10.4       |
+| R8  | Chi phí vận hành Cloud Sync/AI Cloud vượt ngân sách side-project     | Trung bình | Trung bình                 | Giới hạn usage, ưu tiên on-device AI, cân nhắc mô hình self-hosted cho Cloud Sync                         | 10.4, 10.5 |
+| R9  | Model AI on-device kích thước lớn làm chậm tải trang / bundle size   | Cao        | Trung bình                 | Lazy-load model chỉ khi user bật AI Assist; dùng model nén (quantized) kích thước nhỏ                     | 10.5       |
+| R10 | Nhầm lẫn ranh giới Sharing (10.6) với Social Network bị cấm          | Thấp       | Cao                        | Review kỹ trước khi code: KHÔNG thêm feed/follow/public profile dưới bất kỳ hình thức nào (BR-P2-SOC-001) | 10.6       |
+| R11 | Transcribe AI vi phạm bản quyền nội dung podcast nếu mở rộng phạm vi | Thấp       | Cao                        | Giới hạn cứng phạm vi transcribe theo BR-P2-AI-002 (chỉ đoạn ngắn quanh Bookmark, không toàn Episode)     | 10.5       |
 
 ---
 
@@ -476,11 +660,20 @@ Một feature (F0x) được coi là **Done** khi:
 [ ] Phase 6  — Media Session + Background Audio + iOS Fallback
 [ ] Phase 7  — Export Notes + Storage Management + UI Polish
 [ ] Phase 8  — Testing & QA Hardening (Unit/Integration/E2E/Security)
-[ ] Phase 9  — PWA Config + Deployment
-[ ] Phase 10 — (v2.0) Offline DL upgrade, adjustable threshold, waveform, shortcuts
+[x] Phase 9  — PWA Config + Deployment                              ✅ HOÀN THÀNH (MVP Released — 2026-07-25)
+
+--- Phase 10 (v2.0) — chưa bắt đầu, xem chi tiết Section 5 ---
+[ ] Phase 10.1 — Hoàn thiện Offline Download (RSS episode UI)
+[ ] Phase 10.2 — Export JSON + Backup/Restore toàn bộ dữ liệu
+[ ] Phase 10.3 — Settings UI mở rộng (Silence Skip threshold, Playback defaults)
+[ ] Phase 10.4 — Cloud Sync (Opt-in, End-to-End Encrypted)
+[ ] Phase 10.5 — AI Assist (Opt-in, on-device ưu tiên: Transcribe quanh Bookmark, Tóm tắt Note)
+[ ] Phase 10.6 — Chia sẻ Bookmark tĩnh (Static Sharing, có điều kiện)
 ```
+
+> **Ghi chú:** Phase 0 → Phase 8 giữ nguyên trạng thái `[ ]` trong checklist gốc phía trên vì đây là artifact lịch sử của kế hoạch ban đầu; trạng thái THỰC TẾ (100% Hoàn thành) được xác nhận tại **Section 1.1** đầu tài liệu.
 
 ---
 
-> **Master Plan v1.1 — tổng hợp từ Problem Definition, Business Rules v1.1, PRD v1.0, SDD v1.1, Tech-Spec v1.1.**
-> Tài liệu này là nguồn theo dõi tiến độ chính thức; cập nhật trạng thái checklist trực tiếp trong file này khi triển khai.
+> **Master Plan v1.2 — tổng hợp từ Problem Definition v1.0, Business Rules v1.2, PRD v1.1, SDD v1.2, Tech-Spec v1.2.**
+> Tài liệu này là nguồn theo dõi tiến độ chính thức; cập nhật trạng thái checklist trực tiếp trong file này khi triển khai Phase 10.

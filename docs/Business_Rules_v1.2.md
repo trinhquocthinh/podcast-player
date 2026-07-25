@@ -1,25 +1,28 @@
-# Business Rules — Distraction-Free Audio Learning Player
+# Business Rules — Distraction-Free Audio Learning Player (FocusCast)
 
-## Version 1.1
+## Version 1.2
 
-> Tài liệu này được trích xuất và phân tích chuyên sâu từ [Problem_Definition_v1.0.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/Problem_Definition_v1.0.md).
+> Tài liệu này được trích xuất và phân tích chuyên sâu từ [Problem_Definition_v1.0.md](/docs/Problem_Definition_v1.0.md), sau đó đối chiếu lại với source code thực tế của MVP (Phase 0 → Phase 9 đã hoàn thành) tại thời điểm release.
 > Mỗi Business Rule được gán mã định danh duy nhất theo format: `BR-<Domain>-<Số thứ tự>`.
+
+> **Changelog v1.2 (2026-07-25):** Rà soát toàn bộ 35 Business Rules đối chiếu với implementation thực tế (post Phase-1 completion review). Bổ sung ghi chú trạng thái triển khai (✅ Đã implement / 🟡 Một phần / 🔲 Chưa) cho từng rule quan trọng. Bổ sung **Domain mới `P2` (Phase 2 / v2.0)** phân tích chuyên sâu các tính năng Out-of-Scope (Cloud Sync, AI, Social, Recommendation) kèm bộ Business Rules đề xuất cho giai đoạn 2 — xem Section 12. Điều chỉnh BR-EXP-001 và BR-SRC-005 cho khớp thực tế triển khai.
 
 ---
 
 # 1. Phân tích Domain & Rationale
 
-Từ Problem Definition, hệ thống được chia thành **7 domain chính**:
+Từ Problem Definition, hệ thống được chia thành **7 domain chính** cho MVP (v1.0), cộng thêm **1 domain định hướng tương lai** (`P2`) được bổ sung ở phiên bản tài liệu này:
 
-| Mã Domain | Tên Domain           | Mô tả                                               |
-| --------- | -------------------- | --------------------------------------------------- |
-| `PB`      | **Playback**         | Quản lý luồng phát Audio (Play, Pause, Seek, Speed) |
-| `SS`      | **Silence Skipping** | Phát hiện & cắt bỏ khoảng im lặng thời gian thực    |
-| `BM`      | **Bookmark**         | Đánh dấu timestamp & ghi chú kiến thức              |
-| `SRC`     | **Source**           | Quản lý nguồn Audio (RSS Feed, Local File)          |
-| `DAT`     | **Data**             | Lưu trữ dữ liệu Local-First (IndexedDB)             |
-| `MS`      | **Media Session**    | Điều khiển qua thiết bị ngoại vi & màn hình khóa    |
-| `EXP`     | **Export**           | Xuất ghi chú ra định dạng ngoài                     |
+| Mã Domain | Tên Domain           | Mô tả                                                           | Phạm vi                          |
+| --------- | -------------------- | --------------------------------------------------------------- | -------------------------------- |
+| `PB`      | **Playback**         | Quản lý luồng phát Audio (Play, Pause, Seek, Speed)             | MVP (v1.0)                       |
+| `SS`      | **Silence Skipping** | Phát hiện & cắt bỏ khoảng im lặng thời gian thực                | MVP (v1.0)                       |
+| `BM`      | **Bookmark**         | Đánh dấu timestamp & ghi chú kiến thức                          | MVP (v1.0)                       |
+| `SRC`     | **Source**           | Quản lý nguồn Audio (RSS Feed, Local File)                      | MVP (v1.0)                       |
+| `DAT`     | **Data**             | Lưu trữ dữ liệu Local-First (IndexedDB)                         | MVP (v1.0)                       |
+| `MS`      | **Media Session**    | Điều khiển qua thiết bị ngoại vi & màn hình khóa                | MVP (v1.0)                       |
+| `EXP`     | **Export**           | Xuất ghi chú ra định dạng ngoài                                 | MVP (v1.0)                       |
+| `P2`      | **Phase 2 Roadmap**  | Cloud Sync (opt-in), AI Assist (opt-in), Social, Recommendation | Định hướng v2.0 — xem Section 12 |
 
 ---
 
@@ -333,6 +336,8 @@ Từ Problem Definition, hệ thống được chia thành **7 domain chính**:
 
 **Rationale**: Người dùng mục tiêu nghe "trong lúc di chuyển" — đi vào vùng mất sóng (tàu điện ngầm, máy bay, vùng nông thôn) là tình huống thực tế. Cơ chế download chủ động cho phép người dùng chuẩn bị trước mà không vi phạm nguyên tắc "không pre-download toàn bộ".
 
+**Trạng thái triển khai:** 🟡 Một phần. Hạ tầng đã sẵn sàng (`storage-monitor.ts` — theo dõi quota, `canDownloadOffline()`, `autoCleanupFIFO()`; `Track.offlineAvailable`, `Track.audioBlob` trong schema; import Local File tự động lưu Blob nên `offlineAvailable = true` ngay). Riêng nút **"Download for Offline"** cho Episode đến từ RSS Feed (tải Blob chủ động từ `audioUrl` khi đang xem danh sách, không cần phát trước) **chưa có trên UI** (`EpisodeCard.svelte` mới chỉ hiển thị badge "Đã tải về" khi `offlineAvailable = true`, chưa có action trigger download). Hoàn thiện luồng này là hạng mục ưu tiên đầu tiên của Phase 2 — xem BR-P2-OFF-001.
+
 ---
 
 # 6. Business Rules — Data Domain (DAT)
@@ -439,7 +444,9 @@ Từ Problem Definition, hệ thống được chia thành **7 domain chính**:
 
 ## BR-EXP-001: Xuất Bookmark dạng văn bản
 
-> **Hệ thống PHẢI cho phép xuất danh sách Bookmark của một Track ra định dạng văn bản thuần (Plain Text) và Markdown.**
+> **Hệ thống PHẢI cho phép xuất danh sách Bookmark của một Track ra định dạng Markdown; khi tải file, người dùng có thể chọn phần mở rộng `.md` hoặc `.txt` (cùng nội dung Markdown) để tương thích với công cụ đích.**
+
+> **Trạng thái triển khai:** ✅ Đã implement (`export-service.ts`) — Markdown là format nguồn duy nhất ở MVP. Format JSON/CSV/HTML thuần được đề xuất bổ sung ở Phase 2 (xem BR-P2-EXP-001, Section 12).
 
 **Format xuất (Markdown):**
 
@@ -590,13 +597,203 @@ Từ Problem Definition, hệ thống được chia thành **7 domain chính**:
 
 # 11. Changelog
 
-| Ngày       | Thay đổi                                                               | Nguồn           |
-| ---------- | ---------------------------------------------------------------------- | --------------- |
-| 2026-07-23 | Khởi tạo 34 Business Rules từ Problem Definition v1.0                  | Phân tích gốc   |
-| 2026-07-23 | Cập nhật 7 BR hiện có + Thêm 1 BR mới (BR-SRC-005) theo kết quả review | Review feedback |
+| Ngày       | Thay đổi                                                                                                                                                                                                    | Nguồn               |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| 2026-07-23 | Khởi tạo 34 Business Rules từ Problem Definition v1.0                                                                                                                                                       | Phân tích gốc       |
+| 2026-07-23 | Cập nhật 7 BR hiện có + Thêm 1 BR mới (BR-SRC-005) theo kết quả review                                                                                                                                      | Review feedback     |
+| 2026-07-25 | Rà soát toàn bộ 35 BR đối chiếu implementation thực tế (post-MVP review); bổ sung trạng thái triển khai cho BR-EXP-001, BR-SRC-005; thêm Domain `P2` và 18 Business Rules mới cho Phase 2/v2.0 (Section 12) | Release Review v1.2 |
 
 ---
 
-> **Tổng cộng: 35 Business Rules | 7 Domains | Phiên bản: 1.0 (Updated)**
+> **Tổng cộng (v1.0 → v1.1): 35 Business Rules | 7 Domains — đã triển khai ~90-95% trong MVP (xem trạng thái từng rule).**
 >
-> Tài liệu này là nền tảng để xây dựng Use Cases, User Stories, và Technical Specification trong các phase tiếp theo.
+> Tài liệu này là nền tảng để xây dựng Use Cases, User Stories, và Technical Specification. Phần tiếp theo (Section 12) mở rộng bộ Business Rules cho **Phase 2 (v2.0)**, phân tích chuyên sâu các hạng mục hiện đang nằm trong "Out of Scope" của [Problem_Definition_v1.0.md](/docs/Problem_Definition_v1.0.md) §11.
+
+---
+
+# 12. Business Rules — Phase 2 / v2.0 (Phân tích chuyên sâu Out-of-Scope Features)
+
+> **Mục đích của Section này:** Problem Definition v1.0 §11 liệt kê 6 nhóm tính năng "Out of Scope" cho MVP: (1) AI Speech-to-Text, (2) AI Summary, (3) Cloud Sync, (4) Social, (5) Recommendation Algorithm, (6) Hosting/Phân phối audio. Đây KHÔNG có nghĩa là các tính năng này bị loại bỏ vĩnh viễn — chúng bị hoãn có chủ đích để giữ MVP tập trung đúng triết lý "Active Learning Engine". Section này phân tích chuyên sâu từng nhóm để trả lời 3 câu hỏi cho mỗi hạng mục: **(a) Có nên làm không (Should)**, **(b) Nếu làm thì làm thế nào mà không phá vỡ nguyên tắc Local-First/Ad-free (How)**, và **(c) Business Rules cụ thể nếu được thông qua (What)**. Master Plan §Phase 10 (xem [Master_Plan_v1.2.md](/docs/Master_Plan_v1.2.md)) tham chiếu trực tiếp các mã BR-P2-\* dưới đây.
+
+## 12.1 Nguyên tắc bất biến khi mở rộng sang Phase 2
+
+Trước khi phân tích từng domain, 3 nguyên tắc sau **KHÔNG được vi phạm** dù bổ sung bất kỳ tính năng Phase 2 nào — đây là "hiến pháp" của sản phẩm:
+
+| #   | Nguyên tắc bất biến                          | Áp dụng cho Phase 2 như thế nào                                                                                                                                                                                                |
+| --- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | **Local-First là mặc định** (BR-DAT-001)     | Mọi tính năng cần rời khỏi thiết bị (Cloud Sync, AI xử lý server-side) PHẢI là **opt-in rõ ràng** (explicit opt-in, tắt theo mặc định), không bao giờ tự động bật hoặc âm thầm gửi dữ liệu.                                    |
+| 2   | **Ad-free by design** (BR-PB-006)            | Không tính năng Phase 2 nào được tài trợ bằng quảng cáo. Nếu Cloud Sync cần chi phí vận hành (storage, compute AI), phải là mô hình **subscription/self-hosted minh bạch**, không phải "miễn phí đổi bằng dữ liệu người dùng". |
+| 3   | **Không phá vỡ trải nghiệm offline hiện có** | Toàn bộ tính năng MVP (Playback, Bookmark, Silence Skipping) PHẢI tiếp tục hoạt động 100% khi người dùng KHÔNG bật bất kỳ tính năng Phase 2 nào (chế độ "Local-Only" mãi mãi là lựa chọn hợp lệ).                              |
+
+---
+
+## 12.2 Domain P2-OFF: Hoàn thiện Offline Download (nối tiếp BR-SRC-005)
+
+### BR-P2-OFF-001: Nút Download for Offline cho RSS Episode
+
+> **Hệ thống PHẢI bổ sung action "Tải xuống" trên `EpisodeCard` cho Episode đến từ RSS Feed, kích hoạt tải Blob audio từ `audioUrl` về IndexedDB mà KHÔNG cần phát trước.**
+
+- Hiển thị progress bar theo % (dựa trên `Content-Length` header nếu server hỗ trợ, fallback về spinner nếu không).
+- Khi hoàn tất: cập nhật `Track.offlineAvailable = true`, `Track.audioBlob = <Blob>`, `Track.fileSize`.
+- Cho phép hủy download đang chạy (AbortController).
+- Áp dụng lại kiểm tra ngưỡng dung lượng (BR-DAT-004) trước khi bắt đầu tải — chặn nếu `status === 'critical'`.
+
+**Rationale**: Đây là phần còn thiếu duy nhất của BR-SRC-005 gốc; hạ tầng (`storage-monitor.ts`, schema) đã sẵn sàng từ MVP, chỉ cần nối UI.
+
+### BR-P2-OFF-002: Quản lý danh sách Offline tập trung
+
+> **Hệ thống NÊN cung cấp một màn hình "Offline Downloads" liệt kê toàn bộ Track có `offlineAvailable = true`, kèm dung lượng từng Track và action xóa hàng loạt.**
+
+---
+
+## 12.3 Domain P2-CLOUD: Đồng bộ đám mây (Opt-in Cloud Sync)
+
+### Phân tích (Should / How)
+
+Cloud Sync bị loại khỏi MVP vì rủi ro phá vỡ nguyên tắc Local-First và tăng độ phức tạp backend. Tuy nhiên, nhu cầu thực tế "nghe trên điện thoại, xem note trên laptop" là chính đáng. Đề xuất: Cloud Sync là **add-on hoàn toàn tách biệt**, không phải kiến trúc lại app.
+
+- **Mô hình đề xuất**: End-to-End Encrypted Sync (E2EE) — dữ liệu được mã hóa TRÊN THIẾT BỊ trước khi upload, server chỉ lưu blob mã hóa (Zero-Knowledge). Điều này giữ đúng tinh thần "hệ thống không đọc được dữ liệu người dùng" dù kỹ thuật có rời local.
+- **Phạm vi đồng bộ**: chỉ `bookmarks`, `settings`, `playbackState` (nhẹ, có giá trị cao). KHÔNG đồng bộ `audioBlob` (vi phạm "không hosting audio" — BR tổng quát của Problem Definition).
+- **Conflict resolution**: Last-Write-Wins theo `updatedAt`, kèm cơ chế giữ bản duplicate nếu conflict note (không bao giờ mất dữ liệu người dùng do sync).
+
+### BR-P2-CLOUD-001: Cloud Sync là Opt-in tuyệt đối
+
+> **Cloud Sync PHẢI mặc định TẮT. Người dùng phải chủ động bật trong Settings và xác nhận hiểu rõ dữ liệu (đã mã hóa) sẽ rời khỏi thiết bị.**
+
+### BR-P2-CLOUD-002: Mã hóa đầu-cuối (E2EE)
+
+> **Dữ liệu đồng bộ (Bookmark, Note, Settings) PHẢI được mã hóa bằng khóa dẫn xuất từ passphrase của người dùng TRƯỚC khi rời thiết bị. Server lưu trữ KHÔNG được có khả năng giải mã nội dung.**
+
+### BR-P2-CLOUD-003: Phạm vi đồng bộ giới hạn
+
+> **Chỉ đồng bộ metadata nhẹ: `bookmarks`, `settings`, `playbackState`. KHÔNG đồng bộ file audio gốc hoặc bản tải offline — mỗi thiết bị tự tải lại audio từ RSS Feed/Local Import của chính nó.**
+
+### BR-P2-CLOUD-004: Conflict Resolution không mất dữ liệu
+
+> **Khi hai thiết bị sửa cùng một Bookmark trong lúc offline, hệ thống PHẢI áp dụng Last-Write-Wins theo `updatedAt` cho field `note`, nhưng PHẢI giữ lại bản ghi bị ghi đè dưới dạng lịch sử ẩn (tối thiểu 1 bản gần nhất) để tránh mất ghi chú kiến thức.**
+
+### BR-P2-CLOUD-005: Xóa tài khoản Cloud = Xóa dữ liệu Cloud, không xóa dữ liệu Local
+
+> **Khi người dùng tắt Cloud Sync hoặc xóa tài khoản, hệ thống PHẢI xóa toàn bộ bản sao trên server trong ≤ 30 ngày, nhưng KHÔNG được xóa dữ liệu đang có trên thiết bị hiện tại.**
+
+**Rủi ro chính**: Chi phí vận hành server + tăng attack surface (auth, key management). **Mitigation**: Cân nhắc mô hình self-hosted sync server (Docker) để người dùng kỹ thuật tự host, giảm gánh nặng vận hành cho nhóm phát triển.
+
+---
+
+## 12.4 Domain P2-AI: Trợ lý AI (Opt-in AI Assist — STT & Summary)
+
+### Phân tích (Should / How)
+
+Problem Definition loại AI STT/Summary khỏi MVP vì triết lý "Active Learning" ưu tiên người dùng tự ghi chú (chủ động > thụ động). Tuy nhiên, AI có thể **hỗ trợ** thay vì **thay thế** quá trình ghi chú, nếu được thiết kế đúng vai trò phụ trợ.
+
+| Tính năng                                                                                        | Vai trò đề xuất                                                                      | Ranh giới với triết lý cốt lõi                                                 |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| Speech-to-Text tự động toàn bộ Episode                                                           | ❌ Không làm — biến app thành công cụ transcript, lệch trọng tâm Playback            | —                                                                              |
+| **STT cục bộ hóa quanh Bookmark** (chỉ transcript đoạn ±30s quanh timestamp Bookmark, on-demand) | ✅ Đề xuất — giúp người dùng nhớ lại ngữ cảnh mà không cần tua lại nghe              | Chỉ chạy khi user bấm "Transcribe đoạn này", không tự động, không toàn bộ file |
+| Tóm tắt tự động toàn Episode                                                                     | ❌ Không làm — thay thế việc nghe, phản triết lý                                     | —                                                                              |
+| **Tóm tắt Bookmark Note đã có** (gộp N ghi chú rời rạc thành 1 đoạn mạch lạc khi Export)         | ✅ Đề xuất — công cụ PKM, không thay thế việc nghe, chỉ tổng hợp thứ user đã tự viết | Chỉ xử lý text do chính người dùng nhập, không xử lý audio gốc                 |
+
+### BR-P2-AI-001: AI Assist là Opt-in, xử lý cục bộ ưu tiên
+
+> **Mọi tính năng AI PHẢI mặc định TẮT. Ưu tiên chạy model on-device (WebGPU/WASM, ví dụ Whisper.cpp/ONNX) trước; chỉ gọi API AI bên thứ ba (cloud) nếu người dùng chủ động chọn "Dùng AI Cloud" và được cảnh báo rõ dữ liệu audio/text sẽ được gửi đi.**
+
+### BR-P2-AI-002: Transcribe cục bộ quanh Bookmark (không toàn Episode)
+
+> **Tính năng Speech-to-Text (nếu triển khai) CHỈ áp dụng cho đoạn audio ngắn (mặc định ±30 giây, cấu hình được 15-60s) quanh một Bookmark cụ thể, kích hoạt thủ công (on-demand), KHÔNG tự động transcribe toàn bộ Episode.**
+
+### BR-P2-AI-003: Tóm tắt chỉ hoạt động trên Note do người dùng viết
+
+> **Tính năng tóm tắt AI CHỈ được phép xử lý nội dung `note` text mà người dùng đã tự nhập vào Bookmark, phục vụ mục đích Export gọn hơn. KHÔNG được xử lý/tóm tắt trực tiếp nội dung audio gốc để tạo "phát ngôn hộ" tác giả podcast.**
+
+### BR-P2-AI-004: Minh bạch nguồn gốc nội dung AI-generated
+
+> **Mọi văn bản do AI tạo ra (transcript, tóm tắt) PHẢI được đánh dấu rõ ràng trên UI và trong bản Export (ví dụ prefix `[AI Transcript]` / `[AI Summary]`) để phân biệt với ghi chú gốc của người dùng.**
+
+**Rủi ro chính**: Chi phí API AI cloud, độ chính xác STT với audio chất lượng thấp, rủi ro bản quyền khi transcribe nội dung có bản quyền của creator. **Mitigation**: On-device model làm mặc định; giới hạn phạm vi theo đoạn ngắn quanh Bookmark (không phải toàn bộ nội dung có bản quyền).
+
+---
+
+## 12.5 Domain P2-SOC: Tính năng chia sẻ có kiểm soát (KHÔNG phải Social Network)
+
+### Phân tích (Should / How)
+
+Problem Definition (BR-XD-003) khẳng định KHÔNG làm mạng xã hội — quyết định này **giữ nguyên** ở Phase 2. Tuy nhiên có một nhu cầu hẹp, khác về bản chất: "Chia sẻ MỘT bookmark cụ thể cho đồng nghiệp/bạn học" (point-to-point, không phải feed/follow). Điều này được phân loại là **Sharing** (chia sẻ nội dung tĩnh), không phải **Social** (tương tác nhiều người, feed, follow).
+
+### BR-P2-SOC-001: Không triển khai Social Network (giữ nguyên BR-XD-003)
+
+> **Phase 2 KHÔNG triển khai: public profile, feed hoạt động, follow/followers, bình luận, "like". Quyết định BR-XD-003 tiếp tục có hiệu lực.**
+
+### BR-P2-SOC-002: Chia sẻ Bookmark đơn lẻ dạng Static Link (đề xuất, có điều kiện)
+
+> **NẾU triển khai, hệ thống chỉ cho phép xuất MỘT Bookmark (timestamp + note + tên Episode) thành một liên kết tĩnh (static, read-only, không cần tài khoản người nhận) hoặc file ảnh/Markdown để gửi thủ công qua kênh khác (Zalo, Email, Slack...). Hệ thống KHÔNG lưu trữ danh bạ, KHÔNG có khái niệm "bạn bè" hay newsfeed.**
+
+- Link chia sẻ (nếu dùng cloud) PHẢI có thời hạn (mặc định 30 ngày) và có thể thu hồi (revoke) bất kỳ lúc nào.
+- Yêu cầu tối thiểu: tính năng này CHỈ được xây dựng nếu Domain P2-CLOUD đã tồn tại (cần nơi lưu link công khai tạm thời) — không tự tạo hạ tầng riêng.
+
+**Rationale**: Phân biệt rõ "Sharing 1-1 nội dung tĩnh do user chủ động" với "Social Network" (feed, follow, danh tính công khai) — cái sau vẫn bị cấm tuyệt đối.
+
+---
+
+## 12.6 Domain P2-REC: Gợi ý nội dung (Recommendation) — KHÔNG triển khai, chỉ định hướng thay thế
+
+### Phân tích (Should = KHÔNG)
+
+Recommendation Algorithm (gợi ý Podcast nên nghe) mâu thuẫn trực tiếp với Product Objective: _"Hệ thống không cố gắng cạnh tranh với Spotify hay Apple Podcast về việc khám phá (Discover) nội dung mới."_ Đây là ranh giới sản phẩm cố ý, không phải thiếu hụt kỹ thuật.
+
+### BR-P2-REC-001: Không triển khai thuật toán đề xuất nội dung mới
+
+> **Hệ thống KHÔNG triển khai bất kỳ thuật toán đề xuất (recommend) Podcast/Episode MỚI (chưa từng thêm vào Library) nào, dù dựa trên lịch sử nghe, collaborative filtering, hay AI. Quyết định BR-XD-004 (phần "Thuật toán đề xuất Podcast") tiếp tục có hiệu lực vô thời hạn.**
+
+### BR-P2-REC-002: Tiện ích điều hướng nội bộ KHÔNG tính là Recommendation
+
+> **Các tính năng thuần điều hướng trong phạm vi Library hiện có của chính người dùng (ví dụ: "Episode tiếp theo trong cùng Podcast", "Track nghe gần đây", "Track có Bookmark chưa hoàn thành") KHÔNG bị xem là vi phạm BR-P2-REC-001, vì không giới thiệu nội dung MỚI ngoài Library cá nhân.**
+
+**Rationale**: Làm rõ ranh giới để tránh nhầm lẫn giữa "UX điều hướng tiện lợi trong dữ liệu đã có của user" và "thuật toán Discovery nội dung mới" — chỉ cái sau bị cấm.
+
+---
+
+## 12.7 Domain P2-EXP: Mở rộng Export (nối tiếp BR-EXP)
+
+### BR-P2-EXP-001: Bổ sung định dạng xuất JSON
+
+> **Hệ thống NÊN bổ sung tùy chọn xuất Bookmark ra định dạng JSON thuần (`bookmarks.json`) chứa đầy đủ field gốc (`id, trackId, timestampStart, timestampEnd, note, createdAt, updatedAt`), phục vụ mục đích tích hợp lập trình (import vào công cụ khác, backup có cấu trúc).**
+
+### BR-P2-EXP-002: Xuất/Nhập toàn bộ dữ liệu (Backup & Restore thủ công)
+
+> **Hệ thống NÊN cung cấp chức năng Export/Import toàn bộ database (Podcasts, Tracks metadata, Bookmarks, Settings — không gồm audio Blob) ra một file JSON duy nhất, cho phép người dùng backup thủ công hoặc chuyển dữ liệu sang thiết bị khác mà KHÔNG cần Cloud Sync (Domain P2-CLOUD).**
+
+**Rationale**: Đây là "Cloud Sync cho người không muốn Cloud" — giải pháp Local-First thuần túy cho nhu cầu di chuyển dữ liệu, nên ưu tiên xây dựng SỚM HƠN P2-CLOUD vì đơn giản hơn nhiều và không đánh đổi nguyên tắc Local-First.
+
+---
+
+## 12.8 Tổng hợp Business Rules Phase 2 (v2.0)
+
+| Mã              | Tên ngắn                                | Domain    | Loại quyết định                                       |
+| --------------- | --------------------------------------- | --------- | ----------------------------------------------------- |
+| BR-P2-OFF-001   | Download for Offline (RSS Episode)      | Offline   | 🟢 Nên làm ngay (hoàn thiện MVP còn dang dở)          |
+| BR-P2-OFF-002   | Màn hình quản lý Offline tập trung      | Offline   | 🟢 Nên làm                                            |
+| BR-P2-CLOUD-001 | Cloud Sync opt-in tuyệt đối             | Cloud     | 🟡 Cân nhắc — theo nhu cầu người dùng                 |
+| BR-P2-CLOUD-002 | Mã hóa đầu-cuối (E2EE)                  | Cloud     | 🟡 Bắt buộc NẾU làm Cloud Sync                        |
+| BR-P2-CLOUD-003 | Phạm vi đồng bộ giới hạn (không audio)  | Cloud     | 🟡 Bắt buộc NẾU làm Cloud Sync                        |
+| BR-P2-CLOUD-004 | Conflict resolution không mất dữ liệu   | Cloud     | 🟡 Bắt buộc NẾU làm Cloud Sync                        |
+| BR-P2-CLOUD-005 | Xóa tài khoản ≠ xóa dữ liệu Local       | Cloud     | 🟡 Bắt buộc NẾU làm Cloud Sync                        |
+| BR-P2-AI-001    | AI Assist opt-in, ưu tiên on-device     | AI        | 🟡 Cân nhắc — thử nghiệm P2                           |
+| BR-P2-AI-002    | Transcribe cục bộ quanh Bookmark        | AI        | 🟡 Bắt buộc NẾU làm AI STT                            |
+| BR-P2-AI-003    | Tóm tắt chỉ trên Note của user          | AI        | 🟡 Bắt buộc NẾU làm AI Summary                        |
+| BR-P2-AI-004    | Minh bạch nội dung AI-generated         | AI        | 🟡 Bắt buộc NẾU làm bất kỳ AI nào                     |
+| BR-P2-SOC-001   | Không Social Network (giữ nguyên)       | Sharing   | 🔴 Cấm vĩnh viễn                                      |
+| BR-P2-SOC-002   | Chia sẻ Bookmark đơn lẻ (static link)   | Sharing   | 🟡 Cân nhắc — phụ thuộc P2-CLOUD                      |
+| BR-P2-REC-001   | Không đề xuất nội dung mới (giữ nguyên) | Discovery | 🔴 Cấm vĩnh viễn                                      |
+| BR-P2-REC-002   | Điều hướng nội bộ không tính Recommend  | Discovery | 🟢 Được phép (không phải ngoại lệ, vốn không vi phạm) |
+| BR-P2-EXP-001   | Xuất JSON                               | Export    | 🟢 Nên làm                                            |
+| BR-P2-EXP-002   | Backup/Restore JSON toàn bộ             | Export    | 🟢 Nên làm — ưu tiên trước Cloud Sync                 |
+
+**Chú giải mức độ quyết định**: 🟢 Nên làm (Recommended) · 🟡 Cân nhắc/Có điều kiện (Conditional) · 🔴 Cấm vĩnh viễn (Permanently Out of Scope).
+
+> Chi tiết lộ trình triển khai theo Phase con (10.1 → 10.6), effort sizing, kiến trúc, và exit criteria cho từng nhóm BR-P2-\* ở trên: xem [Master_Plan_v1.2.md](/docs/Master_Plan_v1.2.md) — Phase 10.
+
+---
+
+> **Tổng cộng: 35 Business Rules (v1.0 MVP) + 18 Business Rules (v2.0 Phase 2 — Section 12) | 8 Domains**
+>
+> Tài liệu này là nền tảng để xây dựng Use Cases, User Stories, và Technical Specification cho cả MVP đã release lẫn Phase 2 sắp triển khai.

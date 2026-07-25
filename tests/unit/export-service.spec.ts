@@ -18,18 +18,20 @@ describe('ExportService', () => {
 			title: 'Test Podcast',
 			description: 'A test podcast',
 			author: 'Test Author',
-			imageUrl: '',
-			lastUpdated: Date.now()
+			coverImage: '',
+			lastFetched: new Date().toISOString(),
+			createdAt: new Date().toISOString()
 		});
 
 		await db.tracks.add({
 			id: 'track1',
 			podcastFeedUrl: 'https://example.com/feed.xml',
 			title: 'Episode 1',
-			url: 'https://example.com/ep1.mp3',
+			audioUrl: 'https://example.com/ep1.mp3',
 			duration: 1200,
-			position: 0,
-			lastPlayed: Date.now()
+			sourceType: 'rss',
+			offlineAvailable: false,
+			lastPlayedAt: new Date().toISOString()
 		});
 
 		await db.bookmarks.add({
@@ -37,7 +39,9 @@ describe('ExportService', () => {
 			trackId: 'track1',
 			timestampStart: 60,
 			note: 'Great point about testing',
-			createdAt: Date.now()
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
+			orphaned: false
 		});
 
 		await db.bookmarks.add({
@@ -46,7 +50,9 @@ describe('ExportService', () => {
 			timestampStart: 300,
 			timestampEnd: 360,
 			note: '', // empty note
-			createdAt: Date.now()
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
+			orphaned: false
 		});
 	});
 
