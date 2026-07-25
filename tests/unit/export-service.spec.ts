@@ -85,17 +85,20 @@ describe('ExportService', () => {
 			await db.tracks.add({
 				id: 'track2',
 				title: 'Episode 2 (Local)',
-				url: 'blob:local',
+				audioUrl: 'blob:local',
 				duration: 500,
-				position: 0,
-				lastPlayed: Date.now()
+				sourceType: 'local',
+				offlineAvailable: true,
+				lastPlayedAt: new Date().toISOString()
 			});
 			await db.bookmarks.add({
 				id: 'bm3',
 				trackId: 'track2',
 				timestampStart: 120,
 				note: 'Local file note',
-				createdAt: Date.now()
+				createdAt: new Date().toISOString(),
+				updatedAt: new Date().toISOString(),
+				orphaned: false
 			});
 
 			const allMd = await exportAllBookmarksMarkdown();

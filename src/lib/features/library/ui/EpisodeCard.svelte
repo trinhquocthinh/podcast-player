@@ -2,12 +2,53 @@
 	import type { Track } from '$lib/core/db';
 	import { formatDuration } from '$lib/core/utils/time';
 	import { player } from '$lib/features/playback/application/player.svelte';
+	import { offlineService } from '$lib/features/library/infrastructure/offline-service';
+	import { toastState } from '$lib/core/ui/toastState.svelte';
 
 	let { episode, podcastCover } = $props<{ episode: Track; podcastCover?: string }>();
 
+	let isDownloading = $state(false);
+	let downloadProgress = $state(0);
+
 	function handlePlay() {
-		// Delegate cho Player layer — xử lý blob URL on-the-fly cho local files
+		// Delegate cho Player layer — xử lý blob URL on-the-fly
 		player.selectTrack(episode);
+	}
+
+	async function handleDownload() {
+		if (isDownloading) return;
+		isDownloading = true;
+		downloadProgress = 0;
+		try {
+			await offlineService.downloadEpisodeForOffline(episode.id, (progress) => {
+				downloadProgress = progress;
+			});
+			episode.offlineAvailable = true;
+			toastState.add('success', 'Đã tải xong episode');
+		} catch (error) {
+			const err = error as Error;
+			if (err.message !== 'Đã huỷ tải xuống.') {
+				toastState.add('error', err.message || 'Lỗi tải xuống');
+			}
+		} finally {
+			isDownloading = false;
+			downloadProgress = 0;
+		}
+	}
+
+	function handleCancelDownload() {
+		offlineService.cancelDownload(episode.id);
+		isDownloading = false;
+	}
+
+	async function handleDeleteOffline() {
+		try {
+			await offlineService.removeOfflineEpisode(episode.id);
+			episode.offlineAvailable = false;
+			toastState.add('success', 'Đã xóa bản offline');
+		} catch {
+			toastState.add('error', 'Lỗi khi xóa bản offline');
+		}
 	}
 </script>
 
@@ -40,9 +81,24 @@
 			Phát
 		</button>
 
-		{#if episode.offlineAvailable}
-			<span class="badge">Đã tải về</span>
-		{/if}
+		<div class="offline-actions">
+			{#if isDownloading}
+				<div class="download-progress">
+					<div class="progress-bar">
+						<div class="progress-fill" style="width: {downloadProgress}%"></div>
+					</div>
+					<button class="cancel-btn" onclick={handleCancelDownload}>Hủy</button>
+				</div>
+			{:else if episode.offlineAvailable}
+				<button class="badge-btn danger" onclick={handleDeleteOffline} title="Xóa bản offline">
+					Đã tải về (Xóa)
+				</button>
+			{:else if episode.sourceType === 'rss'}
+				<button class="badge-btn" onclick={handleDownload} title="Tải về nghe offline">
+					Tải xuống
+				</button>
+			{/if}
+		</div>
 	</div>
 </div>
 
@@ -127,11 +183,64 @@
 		height: 1.25rem;
 	}
 
-	.badge {
+	.offline-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.badge-btn {
 		font-size: 0.75rem;
 		background: var(--surface-3, #374151);
 		color: var(--text-2, #9ca3af);
 		padding: 0.25rem 0.5rem;
 		border-radius: 4px;
+		border: 1px solid var(--border, #374151);
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.badge-btn:hover {
+		background: var(--surface-4, #4b5563);
+		color: var(--text-1, #f3f4f6);
+	}
+
+	.badge-btn.danger:hover {
+		background: var(--error, #ef4444);
+		color: white;
+		border-color: var(--error, #ef4444);
+	}
+
+	.download-progress {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.progress-bar {
+		width: 80px;
+		height: 6px;
+		background: var(--surface-3, #374151);
+		border-radius: 3px;
+		overflow: hidden;
+	}
+
+	.progress-fill {
+		height: 100%;
+		background: var(--primary, #3b82f6);
+		transition: width 0.1s linear;
+	}
+
+	.cancel-btn {
+		font-size: 0.75rem;
+		background: transparent;
+		color: var(--error, #ef4444);
+		border: none;
+		cursor: pointer;
+		padding: 0 0.25rem;
+	}
+
+	.cancel-btn:hover {
+		text-decoration: underline;
 	}
 </style>

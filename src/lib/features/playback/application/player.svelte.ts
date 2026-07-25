@@ -127,7 +127,7 @@ export class Player {
 				if (audioEngine.isFallbackMode && this.currentTrack) {
 					// Prepare URL
 					let playableUrl = this.currentTrack.audioUrl;
-					if (this.currentTrack.sourceType === 'local' && this.currentBlobUrl) {
+					if (this.currentBlobUrl) {
 						playableUrl = this.currentBlobUrl;
 					}
 					audioEngine.restoreWebAudio(playableUrl);
@@ -182,10 +182,8 @@ export class Player {
 			this.isSilenceSkipEnabled = false;
 		}
 
-		// Tạo playable URL: dùng audioUrl cho RSS, tạo blob URL on-the-fly cho local files.
-		// CRITICAL: Không lưu blob: URL vào DB vì nó chết khi đóng tab.
 		let playableUrl = track.audioUrl;
-		if (track.sourceType === 'local' && track.audioBlob) {
+		if (track.audioBlob) {
 			this.revokeCurrentBlobUrl(); // Revoke URL cũ tránh memory leak
 			playableUrl = URL.createObjectURL(track.audioBlob);
 			this.currentBlobUrl = playableUrl;

@@ -15,7 +15,7 @@ export async function parseLocalFile(
 		let coverBlob: Blob | undefined;
 		if (metadata.common.picture && metadata.common.picture.length > 0) {
 			const picture = metadata.common.picture[0];
-			coverBlob = new Blob([picture.data], { type: picture.format });
+			coverBlob = new Blob([picture.data as BlobPart], { type: picture.format });
 		}
 
 		const title = metadata.common.title || file.name.replace(/\.[^/.]+$/, '');

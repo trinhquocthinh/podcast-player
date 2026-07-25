@@ -12,8 +12,11 @@
 			alt={podcast.title}
 			loading="lazy"
 			onerror={(e) => {
-				e.currentTarget.style.display = 'none';
-				e.currentTarget.nextElementSibling.style.display = 'flex';
+				const img = e.currentTarget as HTMLImageElement;
+				img.style.display = 'none';
+				if (img.nextElementSibling) {
+					(img.nextElementSibling as HTMLElement).style.display = 'flex';
+				}
 			}}
 		/>
 		<div class="fallback-cover" style="display: none;">

@@ -49,17 +49,19 @@ describe('Playback -> Bookmark -> Export Flow', () => {
 			title: 'Flow Podcast',
 			author: 'Tester',
 			description: '',
-			imageUrl: '',
-			lastUpdated: Date.now()
+			coverImage: '',
+			lastFetched: new Date().toISOString(),
+			createdAt: new Date().toISOString()
 		});
 		await db.tracks.add({
 			id: 'track-flow',
 			podcastFeedUrl: 'https://test.com/feed',
 			title: 'Flow Episode',
-			url: 'blob:test',
+			audioUrl: 'blob:test',
 			duration: 1000,
-			position: 0,
-			lastPlayed: Date.now()
+			sourceType: 'rss',
+			offlineAvailable: false,
+			lastPlayedAt: new Date().toISOString()
 		});
 
 		class MockAudio {
