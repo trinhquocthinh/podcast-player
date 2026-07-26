@@ -4,7 +4,11 @@ import { liveQuery } from 'dexie';
 export type PostBookmarkAction = 'CONTINUE' | 'PAUSE_FOR_NOTE';
 
 export const SETTING_KEYS = {
-	BOOKMARK_POST_ACTION: 'bookmark_post_action'
+	BOOKMARK_POST_ACTION: 'bookmark_post_action',
+	SILENCE_SKIP_THRESHOLD: 'silence_skip_threshold',
+	SILENCE_SKIP_MIN_DURATION: 'silence_skip_min_duration',
+	DEFAULT_PLAYBACK_SPEED: 'default_playback_speed',
+	THEME: 'theme'
 };
 
 export class SettingsService {
@@ -48,6 +52,54 @@ export class SettingsService {
 
 	observeBookmarkPostAction() {
 		return this.observeSetting<PostBookmarkAction>(SETTING_KEYS.BOOKMARK_POST_ACTION, 'CONTINUE');
+	}
+
+	async getSilenceSkipThreshold(): Promise<number> {
+		return this.getSetting<number>(SETTING_KEYS.SILENCE_SKIP_THRESHOLD, -40);
+	}
+
+	async setSilenceSkipThreshold(value: number): Promise<void> {
+		await this.setSetting(SETTING_KEYS.SILENCE_SKIP_THRESHOLD, value);
+	}
+
+	observeSilenceSkipThreshold() {
+		return this.observeSetting<number>(SETTING_KEYS.SILENCE_SKIP_THRESHOLD, -40);
+	}
+
+	async getSilenceSkipMinDuration(): Promise<number> {
+		return this.getSetting<number>(SETTING_KEYS.SILENCE_SKIP_MIN_DURATION, 300);
+	}
+
+	async setSilenceSkipMinDuration(value: number): Promise<void> {
+		await this.setSetting(SETTING_KEYS.SILENCE_SKIP_MIN_DURATION, value);
+	}
+
+	observeSilenceSkipMinDuration() {
+		return this.observeSetting<number>(SETTING_KEYS.SILENCE_SKIP_MIN_DURATION, 300);
+	}
+
+	async getDefaultPlaybackSpeed(): Promise<number> {
+		return this.getSetting<number>(SETTING_KEYS.DEFAULT_PLAYBACK_SPEED, 1.0);
+	}
+
+	async setDefaultPlaybackSpeed(value: number): Promise<void> {
+		await this.setSetting(SETTING_KEYS.DEFAULT_PLAYBACK_SPEED, value);
+	}
+
+	observeDefaultPlaybackSpeed() {
+		return this.observeSetting<number>(SETTING_KEYS.DEFAULT_PLAYBACK_SPEED, 1.0);
+	}
+
+	async getTheme(): Promise<string> {
+		return this.getSetting<string>(SETTING_KEYS.THEME, 'system');
+	}
+
+	async setTheme(value: string): Promise<void> {
+		await this.setSetting(SETTING_KEYS.THEME, value);
+	}
+
+	observeTheme() {
+		return this.observeSetting<string>(SETTING_KEYS.THEME, 'system');
 	}
 }
 

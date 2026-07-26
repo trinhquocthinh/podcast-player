@@ -8,6 +8,7 @@
 	import { toastState } from '$lib/core/ui/toastState.svelte';
 	import favicon from '$lib/assets/favicon.svg';
 	import PlayerBar from '$lib/features/playback/ui/PlayerBar.svelte';
+	import BottomNav from '$lib/core/ui/BottomNav.svelte';
 
 	let { children } = $props();
 	let dbReady = $state(false);
@@ -46,6 +47,9 @@
 
 	<!-- Player Bar -->
 	<PlayerBar />
+
+	<!-- Bottom Navigation -->
+	<BottomNav />
 </div>
 
 <Toast />
@@ -62,6 +66,7 @@
 	.main-content {
 		flex: 1;
 		overflow-y: auto;
-		padding-bottom: 80px; /* Space for player bar */
+		/* Space for player bar (approx 80-120px) + bottom nav (approx 65px) */
+		padding-bottom: calc(140px + env(safe-area-inset-bottom));
 	}
 </style>

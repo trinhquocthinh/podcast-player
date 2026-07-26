@@ -1,5 +1,8 @@
 <script lang="ts">
 	import StorageInfo from '$lib/features/settings/ui/StorageInfo.svelte';
+	import PlaybackSettings from '$lib/features/settings/ui/PlaybackSettings.svelte';
+	import SilenceSkipSettings from '$lib/features/settings/ui/SilenceSkipSettings.svelte';
+	import ThemeSettings from '$lib/features/settings/ui/ThemeSettings.svelte';
 </script>
 
 <div class="page-container">
@@ -9,6 +12,9 @@
 
 	<div class="settings-content">
 		<StorageInfo />
+		<PlaybackSettings />
+		<SilenceSkipSettings />
+		<ThemeSettings />
 
 		<section class="settings-section">
 			<a href="/settings/offline" class="settings-link">

@@ -3,6 +3,7 @@ import { db, type Track, type PlaybackState } from '$lib/core/db';
 import { browser } from '$app/environment';
 import { MediaSessionService } from '../infrastructure/media-session';
 import { toastState } from '$lib/core/ui/toastState.svelte';
+import { settingsService } from '$lib/features/settings/infrastructure/settings-service';
 export enum PlaybackStatus {
 	IDLE = 'IDLE',
 	LOADING = 'LOADING',
@@ -35,6 +36,20 @@ export class Player {
 			() => this.seekBackward(),
 			() => this.seekForward()
 		);
+
+		// Load silence skip defaults
+		(async () => {
+			try {
+				const threshold = await settingsService.getSilenceSkipThreshold();
+				const duration = await settingsService.getSilenceSkipMinDuration();
+				audioEngine.updateSilenceSkipOptions({
+					amplitudeThresholdDb: threshold,
+					minSilenceDurationMs: duration
+				});
+			} catch (e) {
+				console.error('Failed to load silence skip settings', e);
+			}
+		})();
 
 		// Bind engine events
 		audioEngine.onLoadSuccess = () => {
@@ -168,7 +183,7 @@ export class Player {
 			if (state && state.speed) {
 				this.pendingSpeed = state.speed;
 			} else {
-				this.pendingSpeed = 1.0;
+				this.pendingSpeed = await settingsService.getDefaultPlaybackSpeed();
 			}
 			if (state && state.silenceSkippingEnabled !== undefined) {
 				this.isSilenceSkipEnabled = state.silenceSkippingEnabled;
@@ -178,7 +193,7 @@ export class Player {
 		} catch (e) {
 			console.error('Failed to recover playback state:', e);
 			this.pendingStartPos = 0;
-			this.pendingSpeed = 1.0;
+			this.pendingSpeed = await settingsService.getDefaultPlaybackSpeed().catch(() => 1.0);
 			this.isSilenceSkipEnabled = false;
 		}
 

@@ -21,6 +21,11 @@ export class AudioEngine {
 	onError: ((err: Error) => void) | null = null;
 	onSilenceSkipped: ((timeSaved: number) => void) | null = null;
 
+	defaultSilenceSkipOptions = {
+		amplitudeThresholdDb: -40,
+		minSilenceDurationMs: 300
+	};
+
 	constructor() {
 		// Initialization is now deferred to load() to ensure a clean slate per track
 	}
@@ -92,8 +97,8 @@ export class AudioEngine {
 
 				this.silenceSkipper = new AudioWorkletNode(this.audioContext, 'silence-skip-processor', {
 					processorOptions: {
-						amplitudeThresholdDb: -40,
-						minSilenceDurationMs: 300,
+						amplitudeThresholdDb: this.defaultSilenceSkipOptions.amplitudeThresholdDb,
+						minSilenceDurationMs: this.defaultSilenceSkipOptions.minSilenceDurationMs,
 						crossfadeDurationMs: 50,
 						bufferZoneStartSec: 3,
 						bufferZoneEndSec: 3,
@@ -257,6 +262,12 @@ export class AudioEngine {
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	updateSilenceSkipOptions(options: any) {
+		if (options.amplitudeThresholdDb !== undefined) {
+			this.defaultSilenceSkipOptions.amplitudeThresholdDb = options.amplitudeThresholdDb;
+		}
+		if (options.minSilenceDurationMs !== undefined) {
+			this.defaultSilenceSkipOptions.minSilenceDurationMs = options.minSilenceDurationMs;
+		}
 		if (this.silenceSkipper) {
 			this.silenceSkipper.port.postMessage({ type: 'updateOptions', options });
 		}

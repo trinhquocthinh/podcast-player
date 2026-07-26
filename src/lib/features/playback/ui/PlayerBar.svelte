@@ -45,7 +45,7 @@
 <style>
 	.player-bar-wrapper {
 		position: fixed;
-		bottom: 0;
+		bottom: calc(56px + env(safe-area-inset-bottom)); /* Height of BottomNav */
 		left: 0;
 		right: 0;
 		transform: translateY(100%);
