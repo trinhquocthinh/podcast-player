@@ -27,6 +27,25 @@
 					<path d="M9 18l6-6-6-6" />
 				</svg>
 			</a>
+
+			<div class="settings-divider"></div>
+
+			<a href="/settings/backup" class="settings-link">
+				<div class="link-content">
+					<h3>Sao lưu & Phục hồi</h3>
+					<p>Tạo bản sao lưu thư viện hoặc phục hồi từ file JSON</p>
+				</div>
+				<svg
+					width="24"
+					height="24"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<path d="M9 18l6-6-6-6" />
+				</svg>
+			</a>
 		</section>
 		<!-- Other settings can go here later -->
 	</div>
@@ -72,6 +91,10 @@
 		margin: 0;
 		font-size: 0.85rem;
 		color: var(--text-2, #9ca3af);
+	}
+
+	.settings-divider {
+		border-top: 1px solid var(--border, #374151);
 	}
 
 	.settings-link svg {

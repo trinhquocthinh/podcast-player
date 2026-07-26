@@ -4,6 +4,8 @@
 	import {
 		exportBookmarksMarkdown,
 		exportAllBookmarksMarkdown,
+		exportBookmarksJson,
+		exportAllBookmarksJson,
 		copyToClipboard,
 		downloadFile
 	} from '$lib/features/export/application/export-service';
@@ -12,7 +14,7 @@
 	let tracksWithBookmarks: Track[] = $state([]);
 	let selectedScope: 'all' | 'single' = $state('all');
 	let selectedTrackId: string = $state('');
-	let selectedFormat: 'markdown' | 'txt' = $state('markdown');
+	let selectedFormat: 'markdown' | 'txt' | 'json' = $state('markdown');
 	let isExporting = $state(false);
 
 	onMount(async () => {
@@ -30,10 +32,18 @@
 	async function handleCopy() {
 		try {
 			isExporting = true;
-			const content =
-				selectedScope === 'all'
-					? await exportAllBookmarksMarkdown()
-					: await exportBookmarksMarkdown(selectedTrackId);
+			let content = '';
+			if (selectedFormat === 'json') {
+				content =
+					selectedScope === 'all'
+						? await exportAllBookmarksJson()
+						: await exportBookmarksJson(selectedTrackId);
+			} else {
+				content =
+					selectedScope === 'all'
+						? await exportAllBookmarksMarkdown()
+						: await exportBookmarksMarkdown(selectedTrackId);
+			}
 			// We use the markdown generator for txt as well since plain text is readable markdown
 			await copyToClipboard(content);
 			toastState.add('success', 'Đã copy vào clipboard');
@@ -48,12 +58,21 @@
 	async function handleDownload() {
 		try {
 			isExporting = true;
-			const content =
-				selectedScope === 'all'
-					? await exportAllBookmarksMarkdown()
-					: await exportBookmarksMarkdown(selectedTrackId);
+			let content = '';
+			if (selectedFormat === 'json') {
+				content =
+					selectedScope === 'all'
+						? await exportAllBookmarksJson()
+						: await exportBookmarksJson(selectedTrackId);
+			} else {
+				content =
+					selectedScope === 'all'
+						? await exportAllBookmarksMarkdown()
+						: await exportBookmarksMarkdown(selectedTrackId);
+			}
 
-			const ext = selectedFormat === 'markdown' ? 'md' : 'txt';
+			let ext = selectedFormat === 'markdown' ? 'md' : 'txt';
+			if (selectedFormat === 'json') ext = 'json';
 			let filename = `all-bookmarks.${ext}`;
 
 			if (selectedScope === 'single') {
@@ -110,6 +129,7 @@
 				<select id="format" bind:value={selectedFormat} class="select-input">
 					<option value="markdown">Markdown (.md)</option>
 					<option value="txt">Plain Text (.txt)</option>
+					<option value="json">JSON (.json)</option>
 				</select>
 			</div>
 
@@ -118,7 +138,11 @@
 					Copy to Clipboard
 				</button>
 				<button class="btn btn-primary" onclick={handleDownload} disabled={isExporting}>
-					Download {selectedFormat === 'markdown' ? '.md' : '.txt'}
+					Download {selectedFormat === 'markdown'
+						? '.md'
+						: selectedFormat === 'txt'
+							? '.txt'
+							: '.json'}
 				</button>
 			</div>
 		{/if}

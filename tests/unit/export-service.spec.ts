@@ -4,6 +4,8 @@ import { db } from '../../src/lib/core/db';
 import {
 	exportBookmarksMarkdown,
 	exportAllBookmarksMarkdown,
+	exportFullBackup,
+	importFullBackup,
 	copyToClipboard,
 	downloadFile
 } from '../../src/lib/features/export/application/export-service';
@@ -167,6 +169,91 @@ describe('ExportService', () => {
 			expect(mockCreateElement).toHaveBeenCalledWith('a');
 			expect(mockAppendChild).toHaveBeenCalled();
 			expect(mockRemoveChild).toHaveBeenCalled();
+		});
+	});
+
+	describe('Backup and Restore', () => {
+		it('should export full backup without blobs', async () => {
+			// Thêm blob giả cho track1
+			await db.tracks.update('track1', {
+				audioBlob: new Blob(['audio']),
+				coverBlob: new Blob(['cover'])
+			});
+
+			const backupJsonStr = await exportFullBackup();
+			const backup = JSON.parse(backupJsonStr);
+
+			expect(backup.version).toBe(1);
+			expect(backup.data.podcasts.length).toBe(1);
+			expect(backup.data.tracks.length).toBe(1);
+			expect(backup.data.bookmarks.length).toBe(2);
+
+			const exportedTrack = backup.data.tracks[0];
+			expect(exportedTrack.audioBlob).toBeUndefined();
+			expect(exportedTrack.coverBlob).toBeUndefined();
+		});
+
+		it('should import full backup and upsert correctly', async () => {
+			const mockBackup = {
+				version: 1,
+				timestamp: new Date().toISOString(),
+				data: {
+					podcasts: [
+						{
+							feedUrl: 'https://new.com/feed',
+							title: 'New Podcast',
+							author: 'A',
+							description: 'D',
+							coverImage: '',
+							lastFetched: new Date().toISOString(),
+							createdAt: new Date().toISOString()
+						}
+					],
+					tracks: [
+						{
+							id: 'track1', // Exist
+							podcastFeedUrl: 'https://example.com/feed.xml',
+							title: 'Episode 1 (Updated)', // updated title
+							audioUrl: 'https://example.com/ep1.mp3',
+							duration: 1500,
+							sourceType: 'rss',
+							offlineAvailable: true
+						}
+					],
+					bookmarks: [],
+					settings: [],
+					playbackState: []
+				}
+			};
+
+			// Simulate track1 having blob in DB
+			const fakeBlob = new Blob(['keep-me']);
+			await db.tracks.update('track1', { audioBlob: fakeBlob });
+
+			await importFullBackup(JSON.stringify(mockBackup));
+
+			// Check podcasts
+			const podcasts = await db.podcasts.toArray();
+			expect(podcasts.length).toBe(2); // old + new
+
+			// Check track1
+			const track1 = await db.tracks.get('track1');
+			expect(track1?.title).toBe('Episode 1 (Updated)');
+			expect(track1?.duration).toBe(1500);
+			// Check if blob was preserved
+			expect(track1?.audioBlob).toBeDefined();
+			expect(track1?.audioBlob).toStrictEqual(fakeBlob);
+		});
+
+		it('should throw error for invalid backup file', async () => {
+			await expect(importFullBackup('invalid json')).rejects.toThrow(
+				'File không đúng định dạng JSON.'
+			);
+
+			const invalidSchema = JSON.stringify({ version: 1 });
+			await expect(importFullBackup(invalidSchema)).rejects.toThrow(
+				'File không phải là file backup hợp lệ của FocusCast.'
+			);
 		});
 	});
 });
