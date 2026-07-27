@@ -1,14 +1,10 @@
 <script lang="ts">
 	import { settingsService, type PostBookmarkAction } from '../infrastructure/settings-service';
 	import { onMount } from 'svelte';
+	import { PlayCircle, Play, Pause } from 'lucide-svelte';
 
 	let speed = $state(1.0);
 	let action = $state<PostBookmarkAction>('CONTINUE');
-
-	const actions = [
-		{ value: 'CONTINUE', label: 'Tiếp tục phát' },
-		{ value: 'PAUSE_FOR_NOTE', label: 'Tạm dừng để ghi chú' }
-	];
 
 	onMount(() => {
 		const sub1 = settingsService.observeDefaultPlaybackSpeed().subscribe((val) => {
@@ -25,102 +21,73 @@
 
 	let saveTimeout: ReturnType<typeof setTimeout>;
 
-	function handleSpeedChange() {
+	function setSpeed(newSpeed: number) {
+		speed = newSpeed;
 		clearTimeout(saveTimeout);
 		saveTimeout = setTimeout(() => {
 			settingsService.setDefaultPlaybackSpeed(speed);
 		}, 300);
 	}
 
-	function handleActionChange(e: Event) {
-		const target = e.target as HTMLSelectElement;
-		settingsService.setBookmarkPostAction(target.value as PostBookmarkAction);
+	function setAction(newAction: PostBookmarkAction) {
+		action = newAction;
+		settingsService.setBookmarkPostAction(action);
 	}
 </script>
 
-<div class="settings-card">
-	<h3>Cấu hình Phát</h3>
-
-	<div class="setting-item">
-		<div class="setting-header">
-			<label for="speed">Tốc độ phát mặc định</label>
-			<span>{speed.toFixed(1)}x</span>
+<section>
+	<h2
+		class="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-2"
+	>
+		<PlayCircle class="w-4 h-4" /> Mặc định Playback
+	</h2>
+	<div class="glass-card rounded-3xl border border-slate-700/50 p-1">
+		<div class="p-3">
+			<h3 class="font-semibold text-white text-sm mb-3">Tốc độ phát mặc định</h3>
+			<div class="flex bg-slate-900/80 rounded-xl p-1 border border-slate-700">
+				{#each [1.0, 1.2, 1.5, 2.0] as s}
+					<button
+						onclick={() => setSpeed(s)}
+						class="flex-1 py-2 text-sm font-semibold rounded-lg transition {speed === s
+							? 'bg-indigo-500 text-white shadow-md'
+							: 'text-slate-400 hover:text-white'}"
+					>
+						{s.toFixed(1)}x
+					</button>
+				{/each}
+			</div>
 		</div>
-		<input
-			type="range"
-			id="speed"
-			min="0.5"
-			max="3.0"
-			step="0.1"
-			bind:value={speed}
-			oninput={handleSpeedChange}
-		/>
-		<p class="description">Tốc độ này sẽ được áp dụng cho các track chưa từng được phát.</p>
-	</div>
 
-	<div class="setting-item">
-		<div class="setting-header">
-			<label for="action">Hành động sau khi Bookmark</label>
+		<div class="p-3 border-t border-slate-700/50">
+			<h3 class="font-semibold text-white text-sm mb-3">Sau khi tạo Bookmark</h3>
+			<div class="grid grid-cols-2 gap-2">
+				<button
+					onclick={() => setAction('CONTINUE')}
+					class="px-3 py-3 rounded-xl border-2 text-sm font-medium flex flex-col items-center gap-1 transition {action ===
+					'CONTINUE'
+						? 'border-indigo-500 bg-indigo-500/10 text-indigo-300'
+						: 'border-transparent bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'}"
+				>
+					<Play class="w-5 h-5" /> Tiếp tục phát
+				</button>
+				<button
+					onclick={() => setAction('PAUSE_FOR_NOTE')}
+					class="px-3 py-3 rounded-xl border-2 text-sm font-medium flex flex-col items-center gap-1 transition {action ===
+					'PAUSE_FOR_NOTE'
+						? 'border-indigo-500 bg-indigo-500/10 text-indigo-300'
+						: 'border-transparent bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'}"
+				>
+					<Pause class="w-5 h-5" /> Tạm dừng
+				</button>
+			</div>
 		</div>
-		<select id="action" bind:value={action} onchange={handleActionChange}>
-			{#each actions as a}
-				<option value={a.value}>{a.label}</option>
-			{/each}
-		</select>
-		<p class="description">
-			Điều khiển xem app có tiếp tục phát sau khi bạn bấm tạo Bookmark nhanh hay không.
-		</p>
 	</div>
-</div>
+</section>
 
 <style>
-	.settings-card {
-		background: var(--surface-2, #1f2937);
-		border-radius: 8px;
-		border: 1px solid var(--border, #374151);
-		padding: 1.5rem;
-	}
-
-	h3 {
-		margin: 0 0 1.5rem 0;
-		font-size: 1.1rem;
-		color: var(--text-1, #f3f4f6);
-	}
-
-	.setting-item {
-		margin-bottom: 1.5rem;
-	}
-
-	.setting-item:last-child {
-		margin-bottom: 0;
-	}
-
-	.setting-header {
-		display: flex;
-		justify-content: space-between;
-		margin-bottom: 0.5rem;
-		color: var(--text-1, #f3f4f6);
-	}
-
-	input[type='range'] {
-		width: 100%;
-		accent-color: var(--primary, #3b82f6);
-	}
-
-	select {
-		width: 100%;
-		padding: 0.5rem;
-		border-radius: 4px;
-		background: var(--surface-3, #374151);
-		color: var(--text-1, #f3f4f6);
-		border: 1px solid var(--border, #4b5563);
-		font-size: 0.95rem;
-	}
-
-	.description {
-		margin: 0.5rem 0 0 0;
-		font-size: 0.85rem;
-		color: var(--text-2, #9ca3af);
-		line-height: 1.4;
+	.glass-card {
+		background: linear-gradient(145deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.5) 100%);
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
 	}
 </style>

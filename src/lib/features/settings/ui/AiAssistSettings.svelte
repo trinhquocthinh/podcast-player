@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { settingsService } from '../infrastructure/settings-service';
 	import { onDestroy } from 'svelte';
+	import { Bot, Info } from 'lucide-svelte';
 
 	let isAiAssistEnabled = $state(false);
 	let isAiUseCloud = $state(false);
@@ -37,201 +38,103 @@
 	}
 </script>
 
-<section class="settings-section">
-	<div class="setting-header">
-		<div>
-			<h3>AI Assist (Thử nghiệm)</h3>
-			<p>Hỗ trợ tóm tắt và ghi âm bằng AI</p>
-		</div>
-		<label class="toggle">
-			<input type="checkbox" checked={isAiAssistEnabled} onchange={handleToggleEnabled} />
-			<span class="slider"></span>
-		</label>
-	</div>
+<section>
+	<h2
+		class="text-xs font-bold text-purple-400 uppercase tracking-widest mb-3 flex items-center gap-2"
+	>
+		<Bot class="w-4 h-4" /> AI Assist (Thử nghiệm)
+	</h2>
+	<div class="glass-card rounded-3xl border border-purple-500/20 overflow-hidden relative">
+		<div
+			class="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent pointer-events-none"
+		></div>
 
-	{#if isAiAssistEnabled}
-		<div class="setting-content">
-			<div class="ai-config-row">
-				<div>
-					<h4>Sử dụng Cloud API (Fallback)</h4>
-					<p>Bật nếu thiết bị yếu, thay vì dùng model cục bộ. Yêu cầu nhập API Key của OpenAI.</p>
-				</div>
-				<label class="toggle">
-					<input type="checkbox" checked={isAiUseCloud} onchange={handleToggleCloud} />
-					<span class="slider"></span>
-				</label>
+		<div class="p-4 flex items-center justify-between relative z-10 border-b border-purple-500/10">
+			<div>
+				<h3 class="font-semibold text-white">Transcribe On-device</h3>
+				<p class="text-xs text-slate-400 mt-0.5">Bóc băng âm thanh quanh Bookmark</p>
 			</div>
-
-			{#if isAiUseCloud}
-				<div class="api-key-container">
-					<label for="apiKey">OpenAI API Key:</label>
-					<div class="input-group">
-						<input type="password" id="apiKey" bind:value={aiCloudApiKey} placeholder="sk-..." />
-						<button class="save-btn" onclick={handleSaveApiKey}>Lưu</button>
-					</div>
-					<p class="warning-text">Lưu ý: API Key của bạn được lưu cục bộ trên trình duyệt.</p>
-				</div>
-			{/if}
+			<div class="relative inline-block w-12 mr-2 align-middle select-none">
+				<input
+					type="checkbox"
+					id="toggle-ai-assist"
+					checked={isAiAssistEnabled}
+					onchange={handleToggleEnabled}
+					class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-slate-800 border-4 border-slate-600 appearance-none cursor-pointer z-10 top-0 left-0 checked:bg-white checked:border-purple-500 checked:right-0 checked:left-auto transition-all duration-300"
+				/>
+				<label
+					for="toggle-ai-assist"
+					class="toggle-label block overflow-hidden h-6 rounded-full bg-slate-600 cursor-pointer"
+				></label>
+			</div>
 		</div>
-	{/if}
+
+		{#if isAiAssistEnabled}
+			<div class="p-4 relative z-10 flex flex-col gap-4">
+				<div class="flex items-center justify-between">
+					<div>
+						<h4 class="font-semibold text-white text-sm">Sử dụng Cloud API (Fallback)</h4>
+						<p class="text-xs text-slate-400 mt-0.5">
+							Dành cho thiết bị yếu, thay vì dùng model cục bộ
+						</p>
+					</div>
+					<div class="relative inline-block w-12 mr-2 align-middle select-none">
+						<input
+							type="checkbox"
+							id="toggle-ai-cloud"
+							checked={isAiUseCloud}
+							onchange={handleToggleCloud}
+							class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-slate-800 border-4 border-slate-600 appearance-none cursor-pointer z-10 top-0 left-0 checked:bg-white checked:border-purple-500 checked:right-0 checked:left-auto transition-all duration-300"
+						/>
+						<label
+							for="toggle-ai-cloud"
+							class="toggle-label block overflow-hidden h-6 rounded-full bg-slate-600 cursor-pointer"
+						></label>
+					</div>
+				</div>
+
+				{#if isAiUseCloud}
+					<div
+						class="flex flex-col gap-2 bg-slate-900/50 p-3 rounded-xl border border-slate-700/50"
+					>
+						<label for="apiKey" class="text-xs font-semibold text-slate-300">OpenAI API Key:</label>
+						<div class="flex gap-2">
+							<input
+								type="password"
+								id="apiKey"
+								bind:value={aiCloudApiKey}
+								placeholder="sk-..."
+								class="flex-1 bg-slate-800 border border-slate-600 text-white px-3 py-2 rounded-lg text-sm focus:outline-none focus:border-purple-500"
+							/>
+							<button
+								onclick={handleSaveApiKey}
+								class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition"
+								>Lưu</button
+							>
+						</div>
+						<p class="text-[10px] text-amber-500/80">
+							Lưu ý: API Key của bạn được lưu cục bộ trên trình duyệt.
+						</p>
+					</div>
+				{/if}
+			</div>
+		{/if}
+
+		<div class="px-4 pb-4 pt-2 relative z-10">
+			<p
+				class="text-[10px] text-purple-300 bg-purple-500/10 px-3 py-2 rounded-lg border border-purple-500/20"
+			>
+				<Info class="w-3 h-3 inline-block mr-1 -mt-0.5" /> Mô hình mặc định chạy hoàn toàn trên máy, không
+				gửi dữ liệu ra ngoài.
+			</p>
+		</div>
+	</div>
 </section>
 
 <style>
-	.settings-section {
-		background: var(--surface-2, #1f2937);
-		border-radius: 8px;
-		border: 1px solid var(--border, #374151);
-		padding: 1rem;
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-
-	.setting-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-	}
-
-	.setting-header h3 {
-		margin: 0 0 0.25rem 0;
-		font-size: 1rem;
-	}
-
-	.setting-header p {
-		margin: 0;
-		font-size: 0.85rem;
-		color: var(--text-2, #9ca3af);
-	}
-
-	.setting-content {
-		border-top: 1px solid var(--border, #374151);
-		padding-top: 1rem;
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-
-	.ai-config-row {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-	}
-
-	.ai-config-row h4 {
-		margin: 0 0 0.25rem 0;
-		font-size: 0.95rem;
-	}
-
-	.ai-config-row p {
-		margin: 0;
-		font-size: 0.85rem;
-		color: var(--text-2, #9ca3af);
-		max-width: 80%;
-	}
-
-	.api-key-container {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		background: var(--surface-3, #374151);
-		padding: 1rem;
-		border-radius: 6px;
-	}
-
-	.api-key-container label {
-		font-size: 0.9rem;
-		font-weight: 500;
-	}
-
-	.input-group {
-		display: flex;
-		gap: 0.5rem;
-	}
-
-	.input-group input {
-		flex: 1;
-		background: var(--surface-1, #111827);
-		border: 1px solid var(--border, #4b5563);
-		color: var(--text-1, #f3f4f6);
-		padding: 0.5rem;
-		border-radius: 4px;
-		font-size: 0.9rem;
-	}
-
-	.input-group input:focus {
-		outline: none;
-		border-color: var(--primary, #3b82f6);
-	}
-
-	.save-btn {
-		background: var(--primary, #3b82f6);
-		color: white;
-		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 4px;
-		cursor: pointer;
-		font-size: 0.9rem;
-	}
-
-	.save-btn:hover {
-		background: var(--primary-hover, #2563eb);
-	}
-
-	.warning-text {
-		margin: 0;
-		font-size: 0.8rem;
-		color: var(--warning, #f59e0b);
-	}
-
-	/* Toggle Switch Styles */
-	.toggle {
-		position: relative;
-		display: inline-block;
-		width: 44px;
-		height: 24px;
-		flex-shrink: 0;
-	}
-
-	.toggle input {
-		opacity: 0;
-		width: 0;
-		height: 0;
-	}
-
-	.slider {
-		position: absolute;
-		cursor: pointer;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		background-color: var(--surface-3, #4b5563);
-		transition: 0.3s;
-		border-radius: 24px;
-	}
-
-	.slider:before {
-		position: absolute;
-		content: '';
-		height: 18px;
-		width: 18px;
-		left: 3px;
-		bottom: 3px;
-		background-color: white;
-		transition: 0.3s;
-		border-radius: 50%;
-	}
-
-	input:checked + .slider {
-		background-color: var(--primary, #3b82f6);
-	}
-
-	input:focus + .slider {
-		box-shadow: 0 0 1px var(--primary, #3b82f6);
-	}
-
-	input:checked + .slider:before {
-		transform: translateX(20px);
+	.glass-card {
+		background: linear-gradient(145deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.5) 100%);
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
 	}
 </style>

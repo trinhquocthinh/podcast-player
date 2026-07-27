@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0545c9" />
+      <stop offset="50%" stop-color="#1483c7" />
+      <stop offset="100%" stop-color="#21d4c2" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Glow effect -->
+  <circle cx="256" cy="256" r="240" fill="#21d4c2" opacity="0.05" />
+  
+  <g stroke="url(#grad1)" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
+    <!-- 4 Dots -->
+    <circle cx="157" cy="157" r="12" fill="url(#grad1)" stroke="none" />
+    <circle cx="355" cy="157" r="12" fill="url(#grad1)" stroke="none" />
+    <circle cx="157" cy="355" r="12" fill="url(#grad1)" stroke="none" />
+    <circle cx="355" cy="355" r="12" fill="url(#grad1)" stroke="none" />
+
+    <!-- Crosshairs -->
+    <line x1="256" y1="60" x2="256" y2="100" />
+    <line x1="256" y1="412" x2="256" y2="452" />
+    <line x1="60" y1="256" x2="100" y2="256" />
+    <line x1="412" y1="256" x2="452" y2="256" />
+
+    <!-- Main Circle (broken at bottom right and left) -->
+    <path d="M 333 372 A 140 140 0 1 0 134 316" />
+    
+    <!-- F Stem (thick outline style) -->
+    <path d="M 160 390 L 160 256 C 160 170, 220 150, 256 150 C 310 150, 330 190, 330 220 L 250 220 C 240 190, 220 190, 200 200 C 190 210, 190 230, 190 256 L 190 390 Z" fill="url(#grad1)" stroke="none" />
+    
+    <!-- F Crossbar and Waveform -->
+    <path d="M 190 260 C 230 260, 260 270, 260 300 
+             L 270 340 L 290 280 L 310 360 L 330 300 L 350 350 L 370 320" />
+  </g>
+</svg>

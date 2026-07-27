@@ -5,6 +5,7 @@ export type PostBookmarkAction = 'CONTINUE' | 'PAUSE_FOR_NOTE';
 
 export const SETTING_KEYS = {
 	BOOKMARK_POST_ACTION: 'bookmark_post_action',
+	SILENCE_SKIP_ENABLED: 'silence_skip_enabled',
 	SILENCE_SKIP_THRESHOLD: 'silence_skip_threshold',
 	SILENCE_SKIP_MIN_DURATION: 'silence_skip_min_duration',
 	DEFAULT_PLAYBACK_SPEED: 'default_playback_speed',
@@ -61,6 +62,18 @@ export class SettingsService {
 
 	observeBookmarkPostAction() {
 		return this.observeSetting<PostBookmarkAction>(SETTING_KEYS.BOOKMARK_POST_ACTION, 'CONTINUE');
+	}
+
+	async isSilenceSkipEnabled(): Promise<boolean> {
+		return this.getSetting<boolean>(SETTING_KEYS.SILENCE_SKIP_ENABLED, true);
+	}
+
+	async setSilenceSkipEnabled(value: boolean): Promise<void> {
+		await this.setSetting(SETTING_KEYS.SILENCE_SKIP_ENABLED, value);
+	}
+
+	observeSilenceSkipEnabled() {
+		return this.observeSetting<boolean>(SETTING_KEYS.SILENCE_SKIP_ENABLED, true);
 	}
 
 	async getSilenceSkipThreshold(): Promise<number> {

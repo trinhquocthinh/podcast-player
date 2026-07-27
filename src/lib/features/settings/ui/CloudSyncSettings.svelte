@@ -21,6 +21,7 @@
 	import PassphraseDialog from '$lib/features/sync/ui/PassphraseDialog.svelte';
 	import SyncStatusIndicator from '$lib/features/sync/ui/SyncStatusIndicator.svelte';
 	import { db } from '$lib/core/db';
+	import { CloudSync } from 'lucide-svelte';
 
 	// State
 	let isEnabled = $state(false);
@@ -233,106 +234,78 @@
 	}
 </script>
 
-<section class="settings-section cloud-sync-section">
-	<div class="section-header">
-		<div class="section-title-row">
-			<div>
-				<h3>Cloud Sync</h3>
-				<p class="section-description">
-					Đồng bộ ghi chú và cài đặt giữa các thiết bị qua Google Drive
+<section>
+	<h2
+		class="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-2"
+	>
+		<CloudSync class="w-4 h-4" /> Đồng bộ đám mây
+	</h2>
+	<div class="glass-card rounded-3xl border border-slate-700/50 p-4">
+		<div class="flex items-start gap-4">
+			<div
+				class="w-12 h-12 rounded-2xl bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shrink-0 shadow-lg shadow-green-500/20"
+			>
+				<svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor"
+					><path
+						d="M7.71 3.5L1.15 15l3.43 6 6.55-11.5M9.73 15L6.3 21h13.12l3.43-6M12 3.5L8.57 9.5h13.12l-3.43-6"
+					/></svg
+				>
+			</div>
+			<div class="flex-1">
+				<h3 class="font-semibold text-white">Google Drive Sync</h3>
+				<p class="text-xs text-slate-400 mt-1 leading-relaxed">
+					Đồng bộ E2EE (Mã hóa đầu cuối) thông qua AppData ẩn. Dữ liệu của bạn được bảo mật 100%.
 				</p>
+				{#if isConnected}
+					<div class="mt-2 text-[10px]">
+						<SyncStatusIndicator status={syncState.status} lastSyncAt={syncState.lastSyncAt} />
+					</div>
+					{#if syncState.error}
+						<div class="mt-2 text-[10px] text-red-400 bg-red-400/10 px-2 py-1 rounded">
+							⚠️ {syncState.error}
+						</div>
+					{/if}
+				{/if}
 			</div>
-			{#if isConnected}
-				<SyncStatusIndicator status={syncState.status} lastSyncAt={syncState.lastSyncAt} />
-			{/if}
 		</div>
-	</div>
 
-	{#if !isEnabled}
-		<!-- Disabled state — BR-P2-CLOUD-001: mặc định TẮT -->
-		<div class="sync-info">
-			<div class="info-card">
-				<svg
-					class="info-icon"
-					width="24"
-					height="24"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
+		{#if !isEnabled}
+			<div class="mt-4 flex gap-2">
+				<button
+					onclick={handleEnableToggle}
+					class="flex-1 py-2.5 bg-white text-slate-900 rounded-xl font-bold text-sm hover:bg-slate-200 transition"
 				>
-					<path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
-					<path d="M12 16v-4" />
-					<path d="M12 8h.01" />
-				</svg>
-				<div>
-					<p>
-						Dữ liệu được mã hóa đầu-cuối (E2EE) bằng passphrase của bạn trước khi lưu trên Google
-						Drive.
-					</p>
-					<p class="sub-info">
-						Chỉ đồng bộ ghi chú, cài đặt và trạng thái phát. <strong>Không</strong> đồng bộ file âm thanh.
-					</p>
-				</div>
+					Kết nối tài khoản
+				</button>
 			</div>
-
-			<button class="btn btn-primary" onclick={handleEnableToggle}>
-				<svg
-					width="20"
-					height="20"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
+		{:else if isConnected}
+			<div class="mt-4 flex gap-2">
+				<button
+					onclick={handleSyncNow}
+					disabled={isSyncing}
+					class="flex-1 py-2.5 bg-white text-slate-900 rounded-xl font-bold text-sm hover:bg-slate-200 transition"
 				>
-					<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-					<polyline points="17 8 12 3 7 8" />
-					<line x1="12" y1="3" x2="12" y2="15" />
-				</svg>
-				Bật Cloud Sync
-			</button>
-		</div>
-	{:else if isConnected}
-		<!-- Connected state -->
-		<div class="connected-controls">
-			<div class="provider-badge">
-				<svg
-					width="20"
-					height="20"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="#22c55e"
-					stroke-width="2"
-				>
-					<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-					<polyline points="22 4 12 14.01 9 11.01" />
-				</svg>
-				<span>Đã kết nối Google Drive</span>
-			</div>
-
-			{#if syncState.error}
-				<div class="error-banner">
-					<span>⚠️ {syncState.error}</span>
-				</div>
-			{/if}
-
-			<div class="action-buttons">
-				<button class="btn btn-secondary" onclick={handleSyncNow} disabled={isSyncing}>
 					{isSyncing ? '🔄 Đang đồng bộ...' : '🔄 Đồng bộ ngay'}
 				</button>
-
-				<button class="btn btn-danger" onclick={() => (showDisconnectConfirm = true)}>
+				<button
+					onclick={() => (showDisconnectConfirm = true)}
+					class="px-4 py-2.5 bg-slate-800 border border-slate-700 text-slate-400 rounded-xl font-semibold text-sm hover:text-white transition"
+				>
 					Ngắt kết nối
 				</button>
 			</div>
-		</div>
-	{:else}
-		<!-- Enabled but not connected yet -->
-		<div class="sync-info">
-			<p class="pending-text">Đang chờ kết nối Google Drive...</p>
-			<button class="btn btn-secondary" onclick={handleEnableToggle}> Thử lại </button>
-		</div>
-	{/if}
+		{:else}
+			<div class="mt-4 flex gap-2">
+				<p class="text-xs text-slate-400 flex-1 flex items-center">Đang chờ kết nối...</p>
+				<button
+					onclick={handleEnableToggle}
+					class="px-4 py-2.5 bg-slate-800 border border-slate-700 text-slate-400 rounded-xl font-semibold text-sm hover:text-white transition"
+				>
+					Thử lại
+				</button>
+			</div>
+		{/if}
+	</div>
 </section>
 
 <!-- Passphrase Dialog -->
@@ -349,136 +322,40 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="overlay" onclick={() => (showDisconnectConfirm = false)}>
 		<div
-			class="confirm-dialog"
+			class="confirm-dialog glass-card"
 			onclick={(e) => e.stopPropagation()}
 			role="alertdialog"
 			aria-modal="true"
 			tabindex="-1"
 		>
-			<h3>Ngắt kết nối Cloud Sync?</h3>
-			<p>Dữ liệu trên Google Drive sẽ bị <strong>xóa ngay lập tức</strong>.</p>
-			<p>Dữ liệu trên thiết bị này sẽ <strong>không bị ảnh hưởng</strong>.</p>
-			<div class="button-row">
-				<button class="btn btn-secondary" onclick={() => (showDisconnectConfirm = false)}
-					>Hủy</button
+			<h3 class="text-lg font-bold text-white mb-2">Ngắt kết nối Cloud Sync?</h3>
+			<p class="text-sm text-slate-400 mb-1">
+				Dữ liệu trên Google Drive sẽ bị <strong class="text-red-400">xóa ngay lập tức</strong>.
+			</p>
+			<p class="text-sm text-slate-400 mb-4">
+				Dữ liệu trên thiết bị này sẽ <strong class="text-white">không bị ảnh hưởng</strong>.
+			</p>
+			<div class="flex gap-2 justify-end">
+				<button
+					class="px-4 py-2 rounded-lg text-sm font-semibold text-slate-300 hover:text-white transition"
+					onclick={() => (showDisconnectConfirm = false)}>Hủy</button
 				>
-				<button class="btn btn-danger" onclick={handleDisconnect}>Ngắt kết nối</button>
+				<button
+					class="px-4 py-2 rounded-lg text-sm font-semibold bg-red-500 hover:bg-red-600 text-white transition"
+					onclick={handleDisconnect}>Ngắt kết nối</button
+				>
 			</div>
 		</div>
 	</div>
 {/if}
 
 <style>
-	.cloud-sync-section {
-		background: var(--surface-2, #1f2937);
-		border-radius: 8px;
-		border: 1px solid var(--border, #374151);
-		padding: 1.25rem;
+	.glass-card {
+		background: linear-gradient(145deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.5) 100%);
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
 	}
 
-	.section-header {
-		margin-bottom: 1rem;
-	}
-
-	.section-title-row {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		gap: 1rem;
-	}
-
-	.section-title-row h3 {
-		margin: 0 0 0.25rem;
-		font-size: 1.1rem;
-		color: var(--text-1, #f3f4f6);
-	}
-
-	.section-description {
-		margin: 0;
-		font-size: 0.85rem;
-		color: var(--text-2, #9ca3af);
-	}
-
-	.sync-info {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-
-	.info-card {
-		display: flex;
-		gap: 0.75rem;
-		padding: 1rem;
-		background: rgba(139, 92, 246, 0.06);
-		border: 1px solid rgba(139, 92, 246, 0.15);
-		border-radius: 8px;
-	}
-
-	.info-icon {
-		flex-shrink: 0;
-		color: var(--accent, #8b5cf6);
-		margin-top: 2px;
-	}
-
-	.info-card p {
-		margin: 0;
-		font-size: 0.85rem;
-		color: var(--text-2, #9ca3af);
-		line-height: 1.5;
-	}
-
-	.sub-info {
-		margin-top: 0.5rem !important;
-		font-size: 0.8rem !important;
-		opacity: 0.8;
-	}
-
-	.connected-controls {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-
-	.provider-badge {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-size: 0.9rem;
-		color: #22c55e;
-		font-weight: 500;
-	}
-
-	.error-banner {
-		padding: 0.75rem 1rem;
-		background: rgba(239, 68, 68, 0.1);
-		border: 1px solid rgba(239, 68, 68, 0.3);
-		border-radius: 8px;
-		color: #ef4444;
-		font-size: 0.85rem;
-	}
-
-	.action-buttons {
-		display: flex;
-		gap: 0.75rem;
-		flex-wrap: wrap;
-	}
-
-	.btn-danger {
-		background: transparent;
-		color: #ef4444;
-		border: 1px solid rgba(239, 68, 68, 0.3);
-	}
-
-	.btn-danger:hover {
-		background: rgba(239, 68, 68, 0.1);
-	}
-
-	.pending-text {
-		color: var(--text-2, #9ca3af);
-		font-style: italic;
-	}
-
-	/* Disconnect confirm overlay */
 	.overlay {
 		position: fixed;
 		inset: 0;
@@ -492,31 +369,9 @@
 	}
 
 	.confirm-dialog {
-		background: var(--surface-2, #1f2937);
-		border: 1px solid var(--border, #374151);
-		border-radius: 16px;
-		padding: 2rem;
+		padding: 1.5rem;
 		max-width: 400px;
 		width: 100%;
-		box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-	}
-
-	.confirm-dialog h3 {
-		margin: 0 0 1rem;
-		color: var(--text-1, #f3f4f6);
-	}
-
-	.confirm-dialog p {
-		color: var(--text-2, #9ca3af);
-		margin: 0 0 0.5rem;
-		font-size: 0.9rem;
-		line-height: 1.5;
-	}
-
-	.button-row {
-		display: flex;
-		gap: 0.75rem;
-		justify-content: flex-end;
-		margin-top: 1.5rem;
+		border: 1px solid rgba(255, 255, 255, 0.1);
 	}
 </style>
