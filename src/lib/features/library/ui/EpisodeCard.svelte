@@ -4,8 +4,9 @@
 	import { player } from '$lib/features/playback/application/player.svelte';
 	import { offlineService } from '$lib/features/library/infrastructure/offline-service';
 	import { toastState } from '$lib/core/ui/toastState.svelte';
+	import { Play, Clock, CheckCircle2, DownloadCloud, XCircle } from 'lucide-svelte';
 
-	let { episode, podcastCover } = $props<{ episode: Track; podcastCover?: string }>();
+	let { episode } = $props<{ episode: Track; podcastCover?: string }>();
 
 	let isDownloading = $state(false);
 	let downloadProgress = $state(0);
@@ -52,50 +53,64 @@
 	}
 </script>
 
-<div class="episode-card">
-	<div class="header">
-		{#if podcastCover}
-			<img src={podcastCover} alt={episode.title} loading="lazy" class="cover" />
-		{/if}
-		<div class="info">
-			<h4>{episode.title}</h4>
-			<div class="meta">
-				{#if episode.publishedAt}
-					<span>{new Date(episode.publishedAt).toLocaleDateString()}</span>
-					<span class="dot">•</span>
-				{/if}
-				<span>{formatDuration(episode.duration)}</span>
-			</div>
-		</div>
-	</div>
-
-	{#if episode.description}
-		<p class="description">{episode.description}</p>
+<div
+	class="glass-card p-4 rounded-2xl border border-slate-700/50 hover:border-slate-600 transition-colors group cursor-pointer relative overflow-hidden"
+>
+	{#if episode.publishedAt}
+		<p class="text-[11px] text-slate-500 font-mono font-bold tracking-wider uppercase mb-1.5">
+			{new Date(episode.publishedAt).toLocaleDateString()}
+		</p>
 	{/if}
 
-	<div class="actions">
-		<button onclick={handlePlay} class="play-btn">
-			<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-				<path d="M8 5v14l11-7z" />
-			</svg>
-			Phát
+	<h4
+		class="font-bold text-slate-100 text-base leading-tight mb-2 group-hover:text-white transition-colors"
+	>
+		{episode.title}
+	</h4>
+
+	{#if episode.description}
+		<div class="text-sm text-slate-400 line-clamp-2 mb-4 leading-relaxed">
+			<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+			{@html episode.description}
+		</div>
+	{/if}
+
+	<div class="flex items-center justify-between">
+		<button
+			onclick={handlePlay}
+			class="flex items-center justify-center w-10 h-10 rounded-full bg-slate-800 text-white hover:bg-slate-700 hover:text-indigo-400 transition-colors shadow-lg shadow-black/20"
+		>
+			<Play class="w-4 h-4 fill-current ml-0.5" />
 		</button>
 
-		<div class="offline-actions">
+		<div class="flex items-center gap-4 text-slate-500">
+			<span class="text-xs font-mono font-medium flex items-center gap-1.5">
+				<Clock class="w-3.5 h-3.5" />
+				{formatDuration(episode.duration)}
+			</span>
+
 			{#if isDownloading}
-				<div class="download-progress">
-					<div class="progress-bar">
-						<div class="progress-fill" style="width: {downloadProgress}%"></div>
-					</div>
-					<button class="cancel-btn" onclick={handleCancelDownload}>Hủy</button>
+				<div class="flex items-center gap-2">
+					<span class="text-xs text-indigo-400 font-mono">{downloadProgress.toFixed(0)}%</span>
+					<button
+						onclick={handleCancelDownload}
+						class="text-red-400 hover:text-red-300 transition"
+						title="Hủy"
+					>
+						<XCircle class="w-5 h-5" />
+					</button>
 				</div>
 			{:else if episode.offlineAvailable}
-				<button class="badge-btn danger" onclick={handleDeleteOffline} title="Xóa bản offline">
-					Đã tải về (Xóa)
+				<button
+					onclick={handleDeleteOffline}
+					class="text-green-400 hover:text-green-300 transition"
+					title="Đã tải xuống (Xóa)"
+				>
+					<CheckCircle2 class="w-5 h-5" />
 				</button>
 			{:else if episode.sourceType === 'rss'}
-				<button class="badge-btn" onclick={handleDownload} title="Tải về nghe offline">
-					Tải xuống
+				<button onclick={handleDownload} class="hover:text-white transition" title="Tải xuống">
+					<DownloadCloud class="w-5 h-5" />
 				</button>
 			{/if}
 		</div>
@@ -103,144 +118,15 @@
 </div>
 
 <style>
-	.episode-card {
-		background: var(--surface-2, #1f2937);
-		border-radius: 8px;
-		padding: 1rem;
-		margin-bottom: 1rem;
-		border: 1px solid var(--border, #374151);
+	.glass-card {
+		background: linear-gradient(145deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.5) 100%);
+		backdrop-filter: blur(12px);
+		border: 1px solid rgba(255, 255, 255, 0.05);
 	}
-
-	.header {
-		display: flex;
-		gap: 1rem;
-		margin-bottom: 0.75rem;
-	}
-
-	.cover {
-		width: 64px;
-		height: 64px;
-		border-radius: 4px;
-		object-fit: cover;
-		background: var(--surface-3, #374151);
-	}
-
-	.info h4 {
-		margin: 0 0 0.25rem 0;
-		font-size: 1.1rem;
-		color: var(--text-1, #f3f4f6);
-	}
-
-	.meta {
-		font-size: 0.85rem;
-		color: var(--text-2, #9ca3af);
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.dot {
-		font-size: 0.5rem;
-	}
-
-	.description {
-		font-size: 0.9rem;
-		color: var(--text-2, #9ca3af);
+	.line-clamp-2 {
 		display: -webkit-box;
-		-webkit-line-clamp: 3;
+		-webkit-line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
-		margin: 0 0 1rem 0;
-		line-height: 1.5;
-	}
-
-	.actions {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-	}
-
-	.play-btn {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.5rem 1rem;
-		background: var(--primary, #3b82f6);
-		color: white;
-		border: none;
-		border-radius: 999px;
-		cursor: pointer;
-		font-weight: 500;
-		transition: background 0.2s;
-	}
-
-	.play-btn:hover {
-		background: var(--primary-hover, #2563eb);
-	}
-
-	.play-btn svg {
-		width: 1.25rem;
-		height: 1.25rem;
-	}
-
-	.offline-actions {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.badge-btn {
-		font-size: 0.75rem;
-		background: var(--surface-3, #374151);
-		color: var(--text-2, #9ca3af);
-		padding: 0.25rem 0.5rem;
-		border-radius: 4px;
-		border: 1px solid var(--border, #374151);
-		cursor: pointer;
-		transition: all 0.2s;
-	}
-
-	.badge-btn:hover {
-		background: var(--surface-4, #4b5563);
-		color: var(--text-1, #f3f4f6);
-	}
-
-	.badge-btn.danger:hover {
-		background: var(--error, #ef4444);
-		color: white;
-		border-color: var(--error, #ef4444);
-	}
-
-	.download-progress {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.progress-bar {
-		width: 80px;
-		height: 6px;
-		background: var(--surface-3, #374151);
-		border-radius: 3px;
-		overflow: hidden;
-	}
-
-	.progress-fill {
-		height: 100%;
-		background: var(--primary, #3b82f6);
-		transition: width 0.1s linear;
-	}
-
-	.cancel-btn {
-		font-size: 0.75rem;
-		background: transparent;
-		color: var(--error, #ef4444);
-		border: none;
-		cursor: pointer;
-		padding: 0 0.25rem;
-	}
-
-	.cancel-btn:hover {
-		text-decoration: underline;
 	}
 </style>
