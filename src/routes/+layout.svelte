@@ -39,6 +39,7 @@
 </script>
 
 <svelte:head>
+	<title>FocusCast</title>
 	<link rel="icon" href={favicon} />
 </svelte:head>
 

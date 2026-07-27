@@ -13,6 +13,7 @@
 
 > **Changelog:**
 >
+> - **2026-07-27** — 🎉 **Bổ sung kiến trúc Phase 10 (v2.0) đã hoàn thành**: thêm §2.7 Module Cloud Sync (E2EE, Google Drive appdata, Last-Write-Wins) và §2.8 Module AI Assist (Web Worker, on-device Whisper/DistilBART qua `@xenova/transformers`, cloud fallback). Hai module này đều là Opt-in, không thay đổi kiến trúc Local-First đã mô tả tại §1.
 > - **v1.2** (2026-07-25) — **Release Review**: Xác nhận route `/api/audio-proxy` (§1.1) **KHÔNG được triển khai** — thay vào đó Audio Engine tự xử lý CORS hoàn toàn ở phía client (xem §2.1.5 mới). Bổ sung §2.1.5 "CORS Hybrid Fallback Strategy" mô tả chuỗi xử lý thực tế 3 cấp (`crossOrigin=anonymous` → no-CORS reload → HTML5 `<audio>` thuần). Bổ sung ghi chú kiến trúc §1.2.1 về quy ước inline-types (types khai báo ngay trong service file thay vì `*.types.ts` riêng) như đã triển khai thực tế.
 > - **v1.1** (2026-07-23): Bổ sung quy tắc bắt buộc Unit Test theo từng function (§7.1) và điều kiện hoàn thành Feature, đồng bộ với chính sách Git Hooks tại Tech-Spec §3.4 và Master-Plan §2.1.
 > - **v1.0** (2026-07-23): Bản khởi tạo.
@@ -703,6 +704,58 @@ function registerMediaSession(track: Track, podcast: Podcast): void {
 │  └─ Update position state                                 │
 └────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## 2.7 Module: Cloud Sync (v2.0 — Sub-phase 10.4, Opt-in)
+
+### 2.7.1 Kiến trúc
+
+Module nằm tại `src/lib/features/sync/`, tuân thủ Clean Architecture 4 lớp như các Feature khác:
+
+- **`domain/sync-types.ts`** — interface `CloudSyncProvider` (contract chung, cho phép thay provider khác Google Drive trong tương lai mà không đổi `sync-service.ts`).
+- **`application/sync-service.ts`** — orchestrator: pull → giải mã → merge (Last-Write-Wins theo `updatedAt`) → mã hóa → push. Lưu tối đa 50 bản ghi lịch sử sync (thời điểm, kết quả, số conflict) để hiển thị debug/troubleshoot.
+- **`infrastructure/crypto-service.ts`** — E2EE bằng Web Crypto API thuần (không dùng thư viện ngoài): `PBKDF2-SHA256` (600,000 vòng lặp) sinh key từ passphrase người dùng + `AES-GCM 256-bit` mã hóa payload. Định dạng lưu trữ: `base64(salt):base64(iv):base64(ciphertext)`. Passphrase **không bao giờ** được gửi lên server — toàn bộ encrypt/decrypt chạy client-side.
+- **`infrastructure/google-drive-provider.ts`** — triển khai `CloudSyncProvider` qua Google Drive API scope `drive.appdata` (app chỉ thấy file của chính nó, không đụng được file khác của user).
+- **`infrastructure/google-auth-client.ts`** — quản lý vòng đời OAuth token (access/refresh) ở client.
+- **`ui/PassphraseDialog.svelte`** — thiết lập passphrase lần đầu hoặc nhập lại để mở khóa dữ liệu đã sync từ thiết bị khác.
+- **`ui/SyncStatusIndicator.svelte`** — hiển thị trạng thái `idle` / `syncing` / `error` + thời điểm sync gần nhất.
+
+### 2.7.2 Server-side OAuth Relay (stateless)
+
+Routes tại `src/routes/api/auth/google/` (`+server.ts`, `refresh/+server.ts`, `revoke/+server.ts`) chỉ đóng vai trò relay trao đổi mã/token với Google OAuth endpoint — **server không lưu trữ cũng không đọc plaintext dữ liệu người dùng bất kỳ lúc nào** — tuân thủ tuyệt đối nguyên tắc Local-First/E2EE (BR-P2-CLOUD-\*).
+
+### 2.7.3 Data Flow (tóm tắt)
+
+```text
+User bật Cloud Sync → OAuth consent (Google) → thiết lập Passphrase
+  → auto-sync debounce sau mỗi thay đổi dữ liệu (bookmark/note/settings)
+  → pull remote snapshot (nếu có) → decrypt (AES-GCM)
+  → merge với local theo Last-Write-Wins (so `updatedAt`)
+  → encrypt snapshot mới → push lên Google Drive appDataFolder
+  → cập nhật SyncStatusIndicator + lịch sử sync (tối đa 50 bản ghi)
+```
+
+---
+
+## 2.8 Module: AI Assist (v2.0 — Sub-phase 10.5, Opt-in)
+
+### 2.8.1 Kiến trúc
+
+Module nằm tại `src/lib/features/ai/`, chỉ có lớp `infrastructure/` (không cần domain/application riêng vì logic đơn giản, state được quản lý bởi component gọi trực tiếp):
+
+- **`infrastructure/ai-service.ts`** — orchestrator public API (`transcribeSegment()`, `summarizeNotes()`), quyết định dùng on-device hay cloud dựa trên setting người dùng.
+- **`infrastructure/ai.worker.ts`** — Web Worker chạy `@xenova/transformers` (ONNX runtime trong browser), tải model **Whisper-tiny** (transcribe, hỗ trợ tiếng Việt) và **DistilBART** (tóm tắt) — chạy hoàn toàn trên thiết bị người dùng, không gửi audio/text lên server (mặc định on-device-first, đúng tinh thần Local-First).
+- **Cloud fallback (opt-in riêng)** — chỉ kích hoạt nếu người dùng chủ động bật trong Settings **và** tự nhập API key riêng (OpenAI Whisper v1 + GPT-4o-mini) — key lưu local (IndexedDB), không đi qua server của ứng dụng.
+- **`ui/AiAssistSettings.svelte`** (trong `features/settings/`) — toggle bật/tắt AI Assist, chọn on-device/cloud, nhập API key khi dùng cloud.
+
+### 2.8.2 Vì sao chạy trong Web Worker
+
+Inference model (dù là Whisper-tiny) vẫn tốn CPU đáng kể — chạy trên main thread sẽ block UI/audio playback. Web Worker tách inference sang thread riêng, giao tiếp qua `postMessage` (job queue đơn giản: transcribe-segment, summarize-notes).
+
+### 2.8.3 Phạm vi áp dụng
+
+AI Assist chỉ hoạt động **quanh Bookmark đã có** (transcribe đoạn audio ngắn quanh timestamp bookmark, tóm tắt note người dùng tự viết) — không phải transcribe toàn bộ episode, tuân thủ BR-P2-AI-\*.
 
 ---
 

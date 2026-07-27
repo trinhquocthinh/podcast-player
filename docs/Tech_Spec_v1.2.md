@@ -13,6 +13,7 @@
 
 > **Changelog:**
 >
+> - **2026-07-27** — 🎉 **Cập nhật Phase 10 (v2.0) đã hoàn thành**: bổ sung 2 Feature mới vào Project Structure (§2.1) — `features/sync/` (Cloud Sync E2EE qua Google Drive appdata: `domain/`, `application/sync-service.ts`, `infrastructure/{crypto-service, google-drive-provider, google-auth-client}.ts`, `ui/{PassphraseDialog, SyncStatusIndicator}.svelte`) và `features/ai/` (AI Assist on-device ưu tiên: `infrastructure/{ai-service, ai.worker}.ts` dùng `@xenova/transformers`). Bổ sung route `api/auth/google/{+server,refresh,revoke}.ts`, `api/proxy-download/+server.ts`, `routes/settings/{backup,offline}/+page.svelte`. **Thay đổi quan trọng**: Styling đã chuyển từ Vanilla CSS sang **Tailwind CSS v4** (`@tailwindcss/vite`) + `lucide-svelte`/`@lucide/svelte` icon set (xem §1.1, §2.1); file CSS cũ trong `core/styles/` (`global.css`, `typography.css`, `components.css`, `themes.css`) không còn được import ở bất kỳ đâu, giữ lại như legacy/không sử dụng.
 > - **v1.2** (2026-07-25) — **Release Review — sửa sai lệch quan trọng**: Adapter triển khai thực tế là **`@sveltejs/adapter-vercel`** (không phải `@sveltejs/adapter-node` như v1.1 quy định) — đã sửa §1.1, §3.1, §6.1, §6.2. Xác nhận route `/api/audio-proxy` **KHÔNG được triển khai** — đã loại khỏi Project Structure (§2.1) và Environment Variables (§6.3). Cập nhật Project Structure để khớp source code thực tế: `storage-monitor.ts` chuyển về `core/storage/` (dùng chung, không thuộc riêng Feature Settings); thêm `core/utils/feed-resolver.ts` (resolve Apple Podcasts URL → RSS qua iTunes Lookup API) và `core/utils/local-parser.ts` (đọc ID3/MP4 tag bằng `music-metadata-browser`); tách `export` thành Feature độc lập `features/export/` (không nhúng trong `bookmark/infrastructure/`) với `application/export-service.ts` và `ui/`. Bổ sung `music-metadata-browser` vào Production Dependencies (§3.1).
 > - **v1.1** (2026-07-23): Bổ sung §3.4 Git Hooks & Quality Gate (Husky + lint-staged + pre-commit/pre-push), thêm `husky`/`lint-staged` vào Development Dependencies, cập nhật Project Structure với các file cấu hình liên quan.
 > - **v1.0** (2026-07-23): Bản khởi tạo.
@@ -32,10 +33,14 @@
 │  Framework   │  SvelteKit 2.x + Svelte 5 (Runes)     │
 │  Language    │  TypeScript 5.x                        │
 │  Build Tool  │  Vite 6.x (bundled with SvelteKit)    │
-│  Styling     │  Vanilla CSS (Custom Properties)       │
+│  Styling     │  Tailwind CSS v4 (@tailwindcss/vite)   │
+│  Icons       │  lucide-svelte / @lucide/svelte        │
 │  Audio       │  Web Audio API + HTML5 <audio>         │
 │  Storage     │  IndexedDB via Dexie.js 4.x            │
 │  RSS Parsing │  rss-parser (server-side)              │
+│  On-device AI│  @xenova/transformers (Whisper-tiny,   │
+│              │  DistilBART) — opt-in AI Assist        │
+│  E2E Crypto  │  Web Crypto API (AES-GCM + PBKDF2)     │
 │  PWA         │  @vite-pwa/sveltekit + Workbox         │
 │  Testing     │  Vitest + Playwright                   │
 │  Adapter     │  @sveltejs/adapter-vercel              │
@@ -45,6 +50,8 @@
 ```
 
 > ⚠️ **Đã sửa v1.2:** Bản v1.0/v1.1 dự kiến `@sveltejs/adapter-node` (self-host Node.js runtime). Triển khai thực tế đã chọn **`@sveltejs/adapter-vercel`** (xác nhận trong `vite.config.ts`) và deploy lên Vercel — phù hợp hơn cho side-project/MVP nhờ zero-config CI/CD, không cần quản lý server. Xem §6 Deployment để biết chi tiết trade-off.
+>
+> ⚠️ **Đã sửa 2026-07-27:** Styling ban đầu dự kiến Vanilla CSS + Custom Properties (`core/styles/`) — triển khai thực tế tại Sub-phase 10.3 đã chuyển toàn bộ UI sang **Tailwind CSS v4**, các file CSS cũ vẫn còn trong repo nhưng không còn được import (xem §2.1).
 
 ## 1.2 Stack Justification
 
@@ -83,14 +90,14 @@
 
 **Các node sử dụng:**
 
-| Node                         | Mục đích                               | Chi tiết                                                        |
-| ---------------------------- | -------------------------------------- | --------------------------------------------------------------- |
-| `AudioContext`               | Context chính                          | Tạo 1 lần, quản lý lifecycle                                    |
-| `MediaElementSourceNode`     | Kết nối `<audio>` element vào pipeline | Cho phép stream audio mà không cần tải toàn bộ buffer           |
-| `AudioWorkletNode`           | Silence detection & skipping           | Custom processor chạy trên audio thread riêng                   |
-| `GainNode`                   | Volume control                         | Hỗ trợ crossfade khi skip                                       |
-| `MediaStreamDestinationNode` | iOS keep-alive trick                   | Route audio qua hidden `<audio>` để duy trì background playback |
-| `AnalyserNode`               | (Optional) Waveform visualization      | Phase 2                                                         |
+| Node                         | Mục đích                               | Chi tiết                                                            |
+| ---------------------------- | -------------------------------------- | ------------------------------------------------------------------- |
+| `AudioContext`               | Context chính                          | Tạo 1 lần, quản lý lifecycle                                        |
+| `MediaElementSourceNode`     | Kết nối `<audio>` element vào pipeline | Cho phép stream audio mà không cần tải toàn bộ buffer               |
+| `AudioWorkletNode`           | Silence detection & skipping           | Custom processor chạy trên audio thread riêng                       |
+| `GainNode`                   | Volume control                         | Hỗ trợ crossfade khi skip                                           |
+| `MediaStreamDestinationNode` | iOS keep-alive trick                   | Route audio qua hidden `<audio>` để duy trì background playback     |
+| `AnalyserNode`               | (Chưa dùng) Waveform visualization     | Không nằm trong Business Rules hiện tại, chưa có nhu cầu triển khai |
 
 **Tại sao dùng `AudioWorkletNode` thay vì `ScriptProcessorNode`:**
 
@@ -360,20 +367,40 @@ podcast-player/
 │   │       │   │   ├── PodcastList.svelte
 │   │       │   │   ├── PodcastCard.svelte
 │   │       │   │   ├── EpisodeList.svelte
-│   │       │   │   ├── EpisodeCard.svelte
+│   │       │   │   ├── EpisodeCard.svelte  # Nút "Tải xuống" cho RSS Episode (10.1)
 │   │       │   │   └── AddFeedForm.svelte
 │   │       │   ├── application/
 │   │       │   │   └── library.svelte.ts   # Library state
 │   │       │   ├── infrastructure/
 │   │       │   │   ├── feed-client.ts      # Fetch feed logic
-│   │       │   │   └── offline-service.ts  # Download logic (Phase 10.1 sẽ mở rộng UI trigger)
+│   │       │   │   └── offline-service.ts  # Download logic (downloadEpisodeForOffline, AbortController)
 │   │       │   └── index.ts
+│   │       │
+│   │       ├── sync/                       # (v2.0 — Sub-phase 10.4) Cloud Sync (Opt-in, E2EE)
+│   │       │   ├── domain/
+│   │       │   │   └── sync-types.ts       # Interface CloudSyncProvider
+│   │       │   ├── application/
+│   │       │   │   └── sync-service.ts     # pull→merge→push, auto-sync debounce, Last-Write-Wins
+│   │       │   ├── infrastructure/
+│   │       │   │   ├── crypto-service.ts   # AES-GCM 256 + PBKDF2-SHA256 (600K), Web Crypto API
+│   │       │   │   ├── google-drive-provider.ts # Drive appDataFolder (files.create/update/list/get)
+│   │       │   │   └── google-auth-client.ts     # OAuth token lifecycle (stateless)
+│   │       │   ├── ui/
+│   │       │   │   ├── PassphraseDialog.svelte    # Thiết lập/mở khóa passphrase
+│   │       │   │   └── SyncStatusIndicator.svelte # idle/syncing/error
+│   │       │   └── index.ts
+│   │       │
+│   │       ├── ai/                         # (v2.0 — Sub-phase 10.5) AI Assist (Opt-in, on-device ưu tiên)
+│   │       │   └── infrastructure/
+│   │       │       ├── ai-service.ts       # transcribeSegment(), summarizeNotes(), mode switching
+│   │       │       └── ai.worker.ts        # Web Worker chạy @xenova/transformers (Whisper-tiny, DistilBART)
 │   │       │
 │   │       └── settings/                   # Feature: Configuration
 │   │           ├── ui/
-│   │           │   ├── StorageInfo.svelte  # Duy nhất đã dựng UI ở MVP
-│   │           │   ├── PlaybackSettings.svelte   # Placeholder — chưa dựng UI (Phase 10.3)
-│   │           │   └── SilenceSkipSettings.svelte # Placeholder — chưa dựng UI (Phase 10.3)
+│   │           │   ├── StorageInfo.svelte       # Storage quota + backup/restore/cleanup
+│   │           │   ├── PlaybackSettings.svelte  # (10.3) Default speed, post-bookmark behavior
+│   │           │   ├── SilenceSkipSettings.svelte # (10.3) Slider threshold/min-silence
+│   │           │   └── AiAssistSettings.svelte  # (10.5) Toggle on-device/cloud AI + API key
 │   │           ├── application/
 │   │           │   └── settings.svelte.ts
 │   │           └── index.ts
@@ -394,19 +421,34 @@ podcast-player/
 │   │   │       └── +page.svelte            # Track Bookmarks
 │   │   │
 │   │   ├── export/
-│   │   │   └── +page.svelte                # Export UI (Markdown MVP; JSON ở Phase 10.2)
+│   │   │   └── +page.svelte                # Export UI (Markdown + JSON, tuỳ chọn tóm tắt AI)
 │   │   │
 │   │   ├── settings/
-│   │   │   └── +page.svelte
+│   │   │   ├── +page.svelte                # Settings hub (Tailwind + glass-morphism)
+│   │   │   ├── backup/
+│   │   │   │   └── +page.svelte            # Backup/Restore JSON (10.2)
+│   │   │   └── offline/
+│   │   │       └── +page.svelte            # Quản lý Offline Downloads (10.1)
+│   │   │
+│   │   ├── auth/
+│   │   │   └── google/
+│   │   │       └── +server.ts              # OAuth callback redirect (Cloud Sync)
 │   │   │
 │   │   └── api/
-│   │       └── feed/
-│   │           ├── +server.ts              # RSS Feed proxy
-│   │           └── refresh/
-│   │               └── +server.ts          # Feed refresh
+│   │       ├── feed/
+│   │       │   ├── +server.ts              # RSS Feed proxy
+│   │       │   └── refresh/
+│   │       │       └── +server.ts          # Feed refresh
+│   │       ├── proxy-download/
+│   │       │   └── +server.ts              # CORS relay cho Offline Download (10.1)
+│   │       └── auth/
+│   │           └── google/
+│   │               ├── +server.ts          # OAuth token exchange (stateless relay)
+│   │               ├── refresh/+server.ts  # Refresh access_token
+│   │               └── revoke/+server.ts   # Revoke + ngắt kết nối Cloud Sync
 │   │           # ⚠️ /api/audio-proxy KHÔNG triển khai (xem SDD_v1.2.md §2.1.5)
 │   │
-│   ├── styles/
+│   ├── styles/                     # ⚠️ Legacy — không còn được import từ v2.0 (thay bằng Tailwind v4, xem src/app.css)
 │   │   ├── global.css              # CSS Custom Properties, reset
 │   │   ├── typography.css          # Font imports, text styles
 │   │   ├── components.css          # Shared component styles
@@ -460,17 +502,20 @@ podcast-player/
 
 ## 3.1 Production Dependencies
 
-| Package                    | Version | Purpose                                                             | Size (gzip)     |
-| -------------------------- | ------- | ------------------------------------------------------------------- | --------------- |
-| `@sveltejs/kit`            | `^2.x`  | Full-stack framework                                                | Core            |
-| `@sveltejs/adapter-vercel` | `^5.x`  | Vercel Serverless deployment adapter                                | ~5 KB           |
-| `svelte`                   | `^5.x`  | UI framework                                                        | ~15 KB          |
-| `dexie`                    | `^4.x`  | IndexedDB wrapper                                                   | ~35 KB          |
-| `rss-parser`               | `^3.x`  | RSS/Atom feed parser (server only)                                  | ~20 KB (server) |
-| `music-metadata-browser`   | `^2.x`  | Đọc ID3/MP4 tag (title/artist/cover/duration) cho Local File Import | ~40 KB          |
-| `uuid`                     | `^10.x` | UUID v4 generation                                                  | ~2 KB           |
+| Package                             | Version | Purpose                                                                                                              | Size (gzip)                                         |
+| ----------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| `@sveltejs/kit`                     | `^2.x`  | Full-stack framework                                                                                                 | Core                                                |
+| `@sveltejs/adapter-vercel`          | `^6.x`  | Vercel Serverless deployment adapter                                                                                 | ~5 KB                                               |
+| `svelte`                            | `^5.x`  | UI framework                                                                                                         | ~15 KB                                              |
+| `dexie`                             | `^4.x`  | IndexedDB wrapper                                                                                                    | ~35 KB                                              |
+| `rss-parser`                        | `^3.x`  | RSS/Atom feed parser (server only)                                                                                   | ~20 KB (server)                                     |
+| `music-metadata-browser`            | `^2.x`  | Đọc ID3/MP4 tag (title/artist/cover/duration) cho Local File Import                                                  | ~40 KB                                              |
+| `uuid`                              | `^14.x` | UUID v4 generation                                                                                                   | ~2 KB                                               |
+| `tailwindcss` + `@tailwindcss/vite` | `^4.x`  | Utility-first CSS framework (v2.0 — thay thế Vanilla CSS)                                                            | JIT, chỉ build những class dùng tới                 |
+| `@lucide/svelte` / `lucide-svelte`  | `^1.x`  | Icon set dùng trong toàn bộ UI (v2.0 redesign)                                                                       | Tree-shaken theo icon dùng tới                      |
+| `@xenova/transformers`              | `^2.x`  | On-device AI (Whisper-tiny transcribe, DistilBART summarize) — chỉ lazy-load khi user bật AI Assist (Sub-phase 10.5) | ~2-5 MB model (lazy, không tính vào initial bundle) |
 
-**Total client bundle estimate:** ~70 KB gzip (excl. app code)
+**Total client bundle estimate (excl. lazy AI models):** ~90 KB gzip (excl. app code)
 
 ## 3.2 Development Dependencies
 
@@ -491,13 +536,14 @@ podcast-player/
 
 ## 3.3 Dependencies KHÔNG sử dụng
 
-| Package                                   | Lý do loại trừ                                                                                                                        |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| **TailwindCSS**                           | Khách hàng không yêu cầu. Vanilla CSS + Custom Properties đủ cho dự án này. Giữ bundle nhỏ.                                           |
-| **State management lib (Redux, Zustand)** | Svelte 5 Runes (`$state`, `$derived`) đã đủ mạnh cho state management. Không cần thêm lib.                                            |
-| **Tone.js / Howler.js**                   | Dự án cần kiểm soát fine-grained Web Audio API pipeline. Libraries này abstract quá nhiều, không phù hợp cho custom Silence Skipping. |
-| **Firebase / Supabase**                   | Hệ thống là Local-First (BR-DAT-001). Không cần backend database.                                                                     |
-| **rss-parser (client-side)**              | CORS chặn. Phải chạy server-side qua SvelteKit API route.                                                                             |
+| Package                                   | Lý do loại trừ                                                                                                                              |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| **State management lib (Redux, Zustand)** | Svelte 5 Runes (`$state`, `$derived`) đã đủ mạnh cho state management. Không cần thêm lib.                                                  |
+| **Tone.js / Howler.js**                   | Dự án cần kiểm soát fine-grained Web Audio API pipeline. Libraries này abstract quá nhiều, không phù hợp cho custom Silence Skipping.       |
+| **Firebase / Supabase**                   | Hệ thống là Local-First (BR-DAT-001). Cloud Sync (v2.0) dùng Google Drive appdata của chính người dùng, không tự vận hành backend database. |
+| **rss-parser (client-side)**              | CORS chặn. Phải chạy server-side qua SvelteKit API route.                                                                                   |
+
+> ⚠️ **Cập nhật 2026-07-27:** TailwindCSS **đã được đưa vào sử dụng** ở Sub-phase 10.3 (thay thế Vanilla CSS ban đầu) — xem §1.1, §3.1. Dòng loại trừ TailwindCSS trong các phiên bản Tech-Spec trước đã lỗi thời và được gỡ bỏ.
 
 ---
 

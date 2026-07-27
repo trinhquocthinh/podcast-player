@@ -8,6 +8,8 @@
 > **Changelog v1.2 (2026-07-25):** Rà soát toàn bộ 35 Business Rules đối chiếu với implementation thực tế (post Phase-1 completion review). Bổ sung ghi chú trạng thái triển khai (✅ Đã implement / 🟡 Một phần / 🔲 Chưa) cho từng rule quan trọng. Bổ sung **Domain mới `P2` (Phase 2 / v2.0)** phân tích chuyên sâu các tính năng Out-of-Scope (Cloud Sync, AI, Social, Recommendation) kèm bộ Business Rules đề xuất cho giai đoạn 2 — xem Section 12. Điều chỉnh BR-EXP-001 và BR-SRC-005 cho khớp thực tế triển khai.
 >
 > **Cập nhật 2026-07-26:** Bổ sung **BR-P2-CLOUD-006** — chốt phương án triển khai Cloud Sync là Google Drive `appDataFolder` (thay vì tự vận hành database lưu ciphertext riêng), sau khi thảo luận chuyên sâu về tính khả thi tại Section 12.3.
+>
+> **Cập nhật 2026-07-27 — 🎉 Phase 2 (v2.0) HOÀN THÀNH:** Toàn bộ 19 Business Rules Domain `P2` (Section 12) đã được triển khai và merge vào `main`, ngoại trừ BR-P2-SOC-001/BR-P2-REC-001 (cấm vĩnh viễn, đúng như thiết kế) và bước hành chính "OAuth Consent Screen verification" của BR-P2-CLOUD (không phụ thuộc code, cần thực hiện khi go-live với >100 user thật). Đã cập nhật cột trạng thái tại §12.8 và các ghi chú trạng thái triển khai liên quan trong toàn tài liệu.
 
 ---
 
@@ -15,16 +17,16 @@
 
 Từ Problem Definition, hệ thống được chia thành **7 domain chính** cho MVP (v1.0), cộng thêm **1 domain định hướng tương lai** (`P2`) được bổ sung ở phiên bản tài liệu này:
 
-| Mã Domain | Tên Domain           | Mô tả                                                           | Phạm vi                          |
-| --------- | -------------------- | --------------------------------------------------------------- | -------------------------------- |
-| `PB`      | **Playback**         | Quản lý luồng phát Audio (Play, Pause, Seek, Speed)             | MVP (v1.0)                       |
-| `SS`      | **Silence Skipping** | Phát hiện & cắt bỏ khoảng im lặng thời gian thực                | MVP (v1.0)                       |
-| `BM`      | **Bookmark**         | Đánh dấu timestamp & ghi chú kiến thức                          | MVP (v1.0)                       |
-| `SRC`     | **Source**           | Quản lý nguồn Audio (RSS Feed, Local File)                      | MVP (v1.0)                       |
-| `DAT`     | **Data**             | Lưu trữ dữ liệu Local-First (IndexedDB)                         | MVP (v1.0)                       |
-| `MS`      | **Media Session**    | Điều khiển qua thiết bị ngoại vi & màn hình khóa                | MVP (v1.0)                       |
-| `EXP`     | **Export**           | Xuất ghi chú ra định dạng ngoài                                 | MVP (v1.0)                       |
-| `P2`      | **Phase 2 Roadmap**  | Cloud Sync (opt-in), AI Assist (opt-in), Social, Recommendation | Định hướng v2.0 — xem Section 12 |
+| Mã Domain | Tên Domain           | Mô tả                                                                                            | Phạm vi                           |
+| --------- | -------------------- | ------------------------------------------------------------------------------------------------ | --------------------------------- |
+| `PB`      | **Playback**         | Quản lý luồng phát Audio (Play, Pause, Seek, Speed)                                              | MVP (v1.0)                        |
+| `SS`      | **Silence Skipping** | Phát hiện & cắt bỏ khoảng im lặng thời gian thực                                                 | MVP (v1.0)                        |
+| `BM`      | **Bookmark**         | Đánh dấu timestamp & ghi chú kiến thức                                                           | MVP (v1.0)                        |
+| `SRC`     | **Source**           | Quản lý nguồn Audio (RSS Feed, Local File)                                                       | MVP (v1.0)                        |
+| `DAT`     | **Data**             | Lưu trữ dữ liệu Local-First (IndexedDB)                                                          | MVP (v1.0)                        |
+| `MS`      | **Media Session**    | Điều khiển qua thiết bị ngoại vi & màn hình khóa                                                 | MVP (v1.0)                        |
+| `EXP`     | **Export**           | Xuất ghi chú ra định dạng ngoài                                                                  | MVP (v1.0)                        |
+| `P2`      | **Phase 2 (v2.0)**   | Cloud Sync (opt-in), AI Assist (opt-in), Offline DL, Export JSON/Backup, Static Bookmark Sharing | ✅ Đã triển khai — xem Section 12 |
 
 ---
 
@@ -338,7 +340,7 @@ Từ Problem Definition, hệ thống được chia thành **7 domain chính** c
 
 **Rationale**: Người dùng mục tiêu nghe "trong lúc di chuyển" — đi vào vùng mất sóng (tàu điện ngầm, máy bay, vùng nông thôn) là tình huống thực tế. Cơ chế download chủ động cho phép người dùng chuẩn bị trước mà không vi phạm nguyên tắc "không pre-download toàn bộ".
 
-**Trạng thái triển khai:** 🟡 Một phần. Hạ tầng đã sẵn sàng (`storage-monitor.ts` — theo dõi quota, `canDownloadOffline()`, `autoCleanupFIFO()`; `Track.offlineAvailable`, `Track.audioBlob` trong schema; import Local File tự động lưu Blob nên `offlineAvailable = true` ngay). Riêng nút **"Download for Offline"** cho Episode đến từ RSS Feed (tải Blob chủ động từ `audioUrl` khi đang xem danh sách, không cần phát trước) **chưa có trên UI** (`EpisodeCard.svelte` mới chỉ hiển thị badge "Đã tải về" khi `offlineAvailable = true`, chưa có action trigger download). Hoàn thiện luồng này là hạng mục ưu tiên đầu tiên của Phase 2 — xem BR-P2-OFF-001.
+**Trạng thái triển khai:** ✅ Đã implement (đóng tại Sub-phase 10.1 — 2026-07-27). Nút **"Tải xuống"** cho Episode đến từ RSS Feed hiện có trên `EpisodeCard.svelte`, gọi `downloadEpisodeForOffline()` trong `features/library/infrastructure/offline-service.ts` (qua `/api/proxy-download`, có `AbortController` để hủy), kết hợp hạ tầng sẵn có (`storage-monitor.ts`, `canDownloadOffline()`, `autoCleanupFIFO()`). Màn hình quản lý tập trung tại `src/routes/settings/offline/+page.svelte` (BR-P2-OFF-002).
 
 ---
 
@@ -448,7 +450,7 @@ Từ Problem Definition, hệ thống được chia thành **7 domain chính** c
 
 > **Hệ thống PHẢI cho phép xuất danh sách Bookmark của một Track ra định dạng Markdown; khi tải file, người dùng có thể chọn phần mở rộng `.md` hoặc `.txt` (cùng nội dung Markdown) để tương thích với công cụ đích.**
 
-> **Trạng thái triển khai:** ✅ Đã implement (`export-service.ts`) — Markdown là format nguồn duy nhất ở MVP. Format JSON/CSV/HTML thuần được đề xuất bổ sung ở Phase 2 (xem BR-P2-EXP-001, Section 12).
+> **Trạng thái triển khai:** ✅ Đã implement (`export-service.ts`) — Markdown là format gốc từ MVP. Format **JSON đã được bổ sung tại Sub-phase 10.2** (cùng với Backup/Restore JSON toàn bộ dữ liệu) — xem BR-P2-EXP-001/002, Section 12.
 
 **Format xuất (Markdown):**
 
@@ -695,7 +697,7 @@ Lý do lựa chọn:
 
 > **Provider mặc định cho Cloud Sync PHẢI là Google Drive `appDataFolder` (scope `drive.appdata`). Hệ thống KHÔNG được tự vận hành một database lưu trữ ciphertext của người dùng. Thành phần server (nếu có) CHỈ được phép đóng vai trò relay trao đổi OAuth token (không trạng thái, không lưu trữ), tuyệt đối không được lưu hay đọc nội dung Bookmark/Note đã mã hóa.**
 >
-> **Trạng thái triển khai:** 🟦 Chưa triển khai — xem thiết kế chi tiết tại [Master_Plan_v1.2.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/Master_Plan_v1.2.md) Sub-phase 10.4. Kiến trúc đa-provider (Dropbox/WebDAV/iCloud) có thể bổ sung sau theo cùng interface `CloudSyncProvider`, miễn là tuân thủ nguyên tắc E2EE (BR-P2-CLOUD-002) và không tự lưu ciphertext trên server riêng.
+> **Trạng thái triển khai:** ✅ Đã implement (`features/sync/`) — Google Drive `appDataFolder` provider, E2EE bằng Web Crypto API (AES-GCM 256-bit + PBKDF2-SHA256 600K vòng), opt-in mặc định tắt, conflict resolution Last-Write-Wins. Kiến trúc đa-provider (Dropbox/WebDAV/iCloud) có thể bổ sung sau theo cùng interface `CloudSyncProvider`, miễn là tuân thủ nguyên tắc E2EE (BR-P2-CLOUD-002) và không tự lưu ciphertext trên server riêng.
 
 **Rủi ro chính**: (1) Phụ thuộc tài khoản Google — không hỗ trợ người dùng không dùng Google; (2) OAuth Consent Screen verification overhead khi mở rộng người dùng; (3) Token refresh cần route relay tối giản, có rủi ro vận hành nhỏ hơn nhiều so với tự host database. **Mitigation**: Thiết kế `CloudSyncProvider` như một interface trừu tượng để dễ bổ sung provider thay thế (kể cả self-hosted WebDAV cho người dùng kỹ thuật) mà không phá vỡ BR-P2-CLOUD-002/003/004.
 
@@ -789,28 +791,28 @@ Recommendation Algorithm (gợi ý Podcast nên nghe) mâu thuẫn trực tiếp
 
 ## 12.8 Tổng hợp Business Rules Phase 2 (v2.0)
 
-| Mã              | Tên ngắn                                                       | Domain    | Loại quyết định                                       |
-| --------------- | -------------------------------------------------------------- | --------- | ----------------------------------------------------- |
-| BR-P2-OFF-001   | Download for Offline (RSS Episode)                             | Offline   | 🟢 Nên làm ngay (hoàn thiện MVP còn dang dở)          |
-| BR-P2-OFF-002   | Màn hình quản lý Offline tập trung                             | Offline   | 🟢 Nên làm                                            |
-| BR-P2-CLOUD-001 | Cloud Sync opt-in tuyệt đối                                    | Cloud     | 🟡 Cân nhắc — theo nhu cầu người dùng                 |
-| BR-P2-CLOUD-002 | Mã hóa đầu-cuối (E2EE)                                         | Cloud     | 🟡 Bắt buộc NẾU làm Cloud Sync                        |
-| BR-P2-CLOUD-003 | Phạm vi đồng bộ giới hạn (không audio)                         | Cloud     | 🟡 Bắt buộc NẾU làm Cloud Sync                        |
-| BR-P2-CLOUD-004 | Conflict resolution không mất dữ liệu                          | Cloud     | 🟡 Bắt buộc NẾU làm Cloud Sync                        |
-| BR-P2-CLOUD-005 | Xóa tài khoản ≠ xóa dữ liệu Local                              | Cloud     | 🟡 Bắt buộc NẾU làm Cloud Sync                        |
-| BR-P2-CLOUD-006 | Provider mặc định = Google Drive appdata, không tự vận hành DB | Cloud     | 🟢 Khuyến nghị kiến trúc                              |
-| BR-P2-AI-001    | AI Assist opt-in, ưu tiên on-device                            | AI        | 🟡 Cân nhắc — thử nghiệm P2                           |
-| BR-P2-AI-002    | Transcribe cục bộ quanh Bookmark                               | AI        | 🟡 Bắt buộc NẾU làm AI STT                            |
-| BR-P2-AI-003    | Tóm tắt chỉ trên Note của user                                 | AI        | 🟡 Bắt buộc NẾU làm AI Summary                        |
-| BR-P2-AI-004    | Minh bạch nội dung AI-generated                                | AI        | 🟡 Bắt buộc NẾU làm bất kỳ AI nào                     |
-| BR-P2-SOC-001   | Không Social Network (giữ nguyên)                              | Sharing   | 🔴 Cấm vĩnh viễn                                      |
-| BR-P2-SOC-002   | Chia sẻ Bookmark đơn lẻ (static link)                          | Sharing   | 🟡 Cân nhắc — phụ thuộc P2-CLOUD                      |
-| BR-P2-REC-001   | Không đề xuất nội dung mới (giữ nguyên)                        | Discovery | 🔴 Cấm vĩnh viễn                                      |
-| BR-P2-REC-002   | Điều hướng nội bộ không tính Recommend                         | Discovery | 🟢 Được phép (không phải ngoại lệ, vốn không vi phạm) |
-| BR-P2-EXP-001   | Xuất JSON                                                      | Export    | 🟢 Nên làm                                            |
-| BR-P2-EXP-002   | Backup/Restore JSON toàn bộ                                    | Export    | 🟢 Nên làm — ưu tiên trước Cloud Sync                 |
+| Mã              | Tên ngắn                                                       | Domain    | Trạng thái                                              |
+| --------------- | -------------------------------------------------------------- | --------- | ------------------------------------------------------- |
+| BR-P2-OFF-001   | Download for Offline (RSS Episode)                             | Offline   | ✅ Đã implement                                         |
+| BR-P2-OFF-002   | Màn hình quản lý Offline tập trung                             | Offline   | ✅ Đã implement (`settings/offline`)                    |
+| BR-P2-CLOUD-001 | Cloud Sync opt-in tuyệt đối                                    | Cloud     | ✅ Đã implement — mặc định TẮT                          |
+| BR-P2-CLOUD-002 | Mã hóa đầu-cuối (E2EE)                                         | Cloud     | ✅ Đã implement — AES-GCM + PBKDF2 (Web Crypto API)     |
+| BR-P2-CLOUD-003 | Phạm vi đồng bộ giới hạn (không audio)                         | Cloud     | ✅ Đã implement — chỉ bookmarks/settings/playbackState  |
+| BR-P2-CLOUD-004 | Conflict resolution không mất dữ liệu                          | Cloud     | ✅ Đã implement — Last-Write-Wins + lịch sử tới 50 bản  |
+| BR-P2-CLOUD-005 | Xóa tài khoản ≠ xóa dữ liệu Local                              | Cloud     | ✅ Đã implement — revoke chỉ xóa file appdata           |
+| BR-P2-CLOUD-006 | Provider mặc định = Google Drive appdata, không tự vận hành DB | Cloud     | ✅ Đã implement                                         |
+| BR-P2-AI-001    | AI Assist opt-in, ưu tiên on-device                            | AI        | ✅ Đã implement — `@xenova/transformers` (Whisper-tiny) |
+| BR-P2-AI-002    | Transcribe cục bộ quanh Bookmark                               | AI        | ✅ Đã implement                                         |
+| BR-P2-AI-003    | Tóm tắt chỉ trên Note của user                                 | AI        | ✅ Đã implement                                         |
+| BR-P2-AI-004    | Minh bạch nội dung AI-generated                                | AI        | ✅ Đã implement — nhãn `[AI Transcript]`/`[AI Summary]` |
+| BR-P2-SOC-001   | Không Social Network (giữ nguyên)                              | Sharing   | 🔴 Cấm vĩnh viễn                                        |
+| BR-P2-SOC-002   | Chia sẻ Bookmark đơn lẻ (static link)                          | Sharing   | ✅ Đã implement — Phương án A (ảnh PNG + Web Share API) |
+| BR-P2-REC-001   | Không đề xuất nội dung mới (giữ nguyên)                        | Discovery | 🔴 Cấm vĩnh viễn                                        |
+| BR-P2-REC-002   | Điều hướng nội bộ không tính Recommend                         | Discovery | 🟢 Được phép (không phải ngoại lệ, vốn không vi phạm)   |
+| BR-P2-EXP-001   | Xuất JSON                                                      | Export    | ✅ Đã implement                                         |
+| BR-P2-EXP-002   | Backup/Restore JSON toàn bộ                                    | Export    | ✅ Đã implement                                         |
 
-**Chú giải mức độ quyết định**: 🟢 Nên làm (Recommended) · 🟡 Cân nhắc/Có điều kiện (Conditional) · 🔴 Cấm vĩnh viễn (Permanently Out of Scope).
+**Chú giải**: ✅ Đã implement (production-ready, có unit test) · 🟢 Được phép/áp dụng · 🔴 Cấm vĩnh viễn (Permanently Out of Scope).
 
 > Chi tiết lộ trình triển khai theo Phase con (10.1 → 10.6), effort sizing, kiến trúc, và exit criteria cho từng nhóm BR-P2-\* ở trên: xem [Master_Plan_v1.2.md](/docs/Master_Plan_v1.2.md) — Phase 10.
 
@@ -818,4 +820,4 @@ Recommendation Algorithm (gợi ý Podcast nên nghe) mâu thuẫn trực tiếp
 
 > **Tổng cộng: 35 Business Rules (v1.0 MVP) + 19 Business Rules (v2.0 Phase 2 — Section 12) | 8 Domains**
 >
-> Tài liệu này là nền tảng để xây dựng Use Cases, User Stories, và Technical Specification cho cả MVP đã release lẫn Phase 2 sắp triển khai.
+> Tài liệu này là nền tảng để xây dựng Use Cases, User Stories, và Technical Specification cho cả MVP và Phase 2 — cả hai đều đã release.
