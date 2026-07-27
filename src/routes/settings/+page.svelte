@@ -3,6 +3,7 @@
 	import PlaybackSettings from '$lib/features/settings/ui/PlaybackSettings.svelte';
 	import SilenceSkipSettings from '$lib/features/settings/ui/SilenceSkipSettings.svelte';
 	import ThemeSettings from '$lib/features/settings/ui/ThemeSettings.svelte';
+	import CloudSyncSettings from '$lib/features/settings/ui/CloudSyncSettings.svelte';
 </script>
 
 <div class="page-container">
@@ -53,7 +54,8 @@
 				</svg>
 			</a>
 		</section>
-		<!-- Other settings can go here later -->
+
+		<CloudSyncSettings />
 	</div>
 </div>
 

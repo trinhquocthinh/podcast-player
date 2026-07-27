@@ -175,10 +175,14 @@ export async function copyToClipboard(text: string): Promise<void> {
 export function downloadFile(
 	content: string,
 	filename: string,
-	format: 'markdown' | 'txt' = 'markdown'
+	format: 'markdown' | 'txt' | 'json' = 'markdown'
 ): void {
 	const mimeType =
-		format === 'markdown' ? 'text/markdown;charset=utf-8' : 'text/plain;charset=utf-8';
+		format === 'json'
+			? 'application/json;charset=utf-8'
+			: format === 'markdown'
+				? 'text/markdown;charset=utf-8'
+				: 'text/plain;charset=utf-8';
 	const blob = new Blob([content], { type: mimeType });
 	const url = URL.createObjectURL(blob);
 	const a = document.createElement('a');

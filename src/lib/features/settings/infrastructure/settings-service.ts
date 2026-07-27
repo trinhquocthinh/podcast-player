@@ -8,7 +8,12 @@ export const SETTING_KEYS = {
 	SILENCE_SKIP_THRESHOLD: 'silence_skip_threshold',
 	SILENCE_SKIP_MIN_DURATION: 'silence_skip_min_duration',
 	DEFAULT_PLAYBACK_SPEED: 'default_playback_speed',
-	THEME: 'theme'
+	THEME: 'theme',
+	// Cloud Sync (Sub-phase 10.4)
+	CLOUD_SYNC_ENABLED: 'cloud_sync_enabled',
+	CLOUD_SYNC_PROVIDER: 'cloud_sync_provider',
+	CLOUD_SYNC_PASSPHRASE_TOKEN: 'cloud_sync_passphrase_token',
+	CLOUD_SYNC_LAST_SYNC: 'cloud_sync_last_sync'
 };
 
 export class SettingsService {
@@ -100,6 +105,32 @@ export class SettingsService {
 
 	observeTheme() {
 		return this.observeSetting<string>(SETTING_KEYS.THEME, 'system');
+	}
+
+	// --- Cloud Sync Settings (Sub-phase 10.4) ---
+
+	async isCloudSyncEnabled(): Promise<boolean> {
+		return this.getSetting<boolean>(SETTING_KEYS.CLOUD_SYNC_ENABLED, false);
+	}
+
+	async setCloudSyncEnabled(value: boolean): Promise<void> {
+		await this.setSetting(SETTING_KEYS.CLOUD_SYNC_ENABLED, value);
+	}
+
+	observeCloudSyncEnabled() {
+		return this.observeSetting<boolean>(SETTING_KEYS.CLOUD_SYNC_ENABLED, false);
+	}
+
+	async getCloudSyncProvider(): Promise<string> {
+		return this.getSetting<string>(SETTING_KEYS.CLOUD_SYNC_PROVIDER, '');
+	}
+
+	async setCloudSyncProvider(value: string): Promise<void> {
+		await this.setSetting(SETTING_KEYS.CLOUD_SYNC_PROVIDER, value);
+	}
+
+	async getCloudSyncLastSync(): Promise<string | null> {
+		return this.getSetting<string | null>(SETTING_KEYS.CLOUD_SYNC_LAST_SYNC, null);
 	}
 }
 

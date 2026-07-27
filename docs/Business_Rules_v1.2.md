@@ -6,6 +6,8 @@
 > Mỗi Business Rule được gán mã định danh duy nhất theo format: `BR-<Domain>-<Số thứ tự>`.
 
 > **Changelog v1.2 (2026-07-25):** Rà soát toàn bộ 35 Business Rules đối chiếu với implementation thực tế (post Phase-1 completion review). Bổ sung ghi chú trạng thái triển khai (✅ Đã implement / 🟡 Một phần / 🔲 Chưa) cho từng rule quan trọng. Bổ sung **Domain mới `P2` (Phase 2 / v2.0)** phân tích chuyên sâu các tính năng Out-of-Scope (Cloud Sync, AI, Social, Recommendation) kèm bộ Business Rules đề xuất cho giai đoạn 2 — xem Section 12. Điều chỉnh BR-EXP-001 và BR-SRC-005 cho khớp thực tế triển khai.
+>
+> **Cập nhật 2026-07-26:** Bổ sung **BR-P2-CLOUD-006** — chốt phương án triển khai Cloud Sync là Google Drive `appDataFolder` (thay vì tự vận hành database lưu ciphertext riêng), sau khi thảo luận chuyên sâu về tính khả thi tại Section 12.3.
 
 ---
 
@@ -652,9 +654,22 @@ Trước khi phân tích từng domain, 3 nguyên tắc sau **KHÔNG được vi
 
 Cloud Sync bị loại khỏi MVP vì rủi ro phá vỡ nguyên tắc Local-First và tăng độ phức tạp backend. Tuy nhiên, nhu cầu thực tế "nghe trên điện thoại, xem note trên laptop" là chính đáng. Đề xuất: Cloud Sync là **add-on hoàn toàn tách biệt**, không phải kiến trúc lại app.
 
-- **Mô hình đề xuất**: End-to-End Encrypted Sync (E2EE) — dữ liệu được mã hóa TRÊN THIẾT BỊ trước khi upload, server chỉ lưu blob mã hóa (Zero-Knowledge). Điều này giữ đúng tinh thần "hệ thống không đọc được dữ liệu người dùng" dù kỹ thuật có rời local.
+- **Mô hình đề xuất**: End-to-End Encrypted Sync (E2EE) — dữ liệu được mã hóa TRÊN THIẾT BỊ trước khi upload, nơi lưu trữ chỉ giữ blob mã hóa (Zero-Knowledge). Điều này giữ đúng tinh thần "hệ thống không đọc được dữ liệu người dùng" dù kỹ thuật có rời local.
 - **Phạm vi đồng bộ**: chỉ `bookmarks`, `settings`, `playbackState` (nhẹ, có giá trị cao). KHÔNG đồng bộ `audioBlob` (vi phạm "không hosting audio" — BR tổng quát của Problem Definition).
 - **Conflict resolution**: Last-Write-Wins theo `updatedAt`, kèm cơ chế giữ bản duplicate nếu conflict note (không bao giờ mất dữ liệu người dùng do sync).
+
+### Phương án triển khai khuyến nghị: Google Drive `appDataFolder` (thay vì tự vận hành Sync Server)
+
+> **Kết luận sau khi cân nhắc lại (2026-07-26):** Thay vì tự xây dựng và vận hành một backend lưu trữ `sync_blobs` riêng (kéo theo chi phí hosting DB, quản lý auth, và attack surface mới), **nơi lưu trữ ciphertext nên là chính Google Drive của người dùng**, thông qua scope đặc biệt `drive.appdata` (thư mục ẩn, riêng tư cho từng app, vô hình với giao diện Drive thông thường và với app khác).
+
+Lý do lựa chọn:
+
+1. **Không phát sinh hạ tầng lưu trữ dữ liệu người dùng phía nhóm phát triển** — dữ liệu (đã mã hóa) nằm trong dung lượng Drive của chính người dùng, không phải server của FocusCast. Đây là hình thức Local-First mở rộng: "cloud của người dùng", không phải "cloud của app".
+2. **Zero-Knowledge được đảm bảo tự nhiên hơn** — không có database nào do nhóm phát triển vận hành để rò rỉ; bề mặt tấn công chỉ còn giới hạn ở tài khoản Google của chính người dùng.
+3. **Conflict history gần như miễn phí** — Google Drive tự lưu revision history cho mỗi file, hỗ trợ trực tiếp yêu cầu "giữ lại bản ghi bị ghi đè" của BR-P2-CLOUD-004 mà không cần tự code cơ chế versioning.
+4. **Xóa dữ liệu cloud tức thời** — người dùng tự "Ngắt kết nối" → gọi `files.delete` trên chính file appdata của họ, không cần quy trình xóa phía server trong 30 ngày.
+
+Đánh đổi cần chấp nhận: (a) người dùng bắt buộc phải có tài khoản Google; (b) do luồng OAuth Authorization Code cần `client_secret` để đổi `refresh_token`, hệ thống vẫn cần **một route server tối giản, không trạng thái** (`/api/auth/google/+server.ts`) chỉ làm nhiệm vụ relay việc đổi mã OAuth — route này KHÔNG BAO GIỜ lưu trữ hay đọc nội dung Bookmark/Note đã mã hóa, chỉ chuyển tiếp token; (c) scope `drive.appdata` thuộc nhóm "sensitive scope" nên cần qua OAuth Consent Screen verification của Google khi phát hành rộng rãi (giai đoạn thử nghiệm dưới 100 user không bắt buộc, nhưng người dùng sẽ thấy cảnh báo "Unverified app").
 
 ### BR-P2-CLOUD-001: Cloud Sync là Opt-in tuyệt đối
 
@@ -674,9 +689,15 @@ Cloud Sync bị loại khỏi MVP vì rủi ro phá vỡ nguyên tắc Local-Fir
 
 ### BR-P2-CLOUD-005: Xóa tài khoản Cloud = Xóa dữ liệu Cloud, không xóa dữ liệu Local
 
-> **Khi người dùng tắt Cloud Sync hoặc xóa tài khoản, hệ thống PHẢI xóa toàn bộ bản sao trên server trong ≤ 30 ngày, nhưng KHÔNG được xóa dữ liệu đang có trên thiết bị hiện tại.**
+> **Khi người dùng tắt Cloud Sync hoặc xóa tài khoản, hệ thống PHẢI xóa toàn bộ bản sao trên nơi lưu trữ đám mây trong ≤ 30 ngày (hoặc NGAY LẬP TỨC nếu dùng phương án Google Drive appdata — xem BR-P2-CLOUD-006), nhưng KHÔNG được xóa dữ liệu đang có trên thiết bị hiện tại.**
 
-**Rủi ro chính**: Chi phí vận hành server + tăng attack surface (auth, key management). **Mitigation**: Cân nhắc mô hình self-hosted sync server (Docker) để người dùng kỹ thuật tự host, giảm gánh nặng vận hành cho nhóm phát triển.
+### BR-P2-CLOUD-006: Provider mặc định là Google Drive `appDataFolder`, không tự vận hành Database lưu trữ ciphertext
+
+> **Provider mặc định cho Cloud Sync PHẢI là Google Drive `appDataFolder` (scope `drive.appdata`). Hệ thống KHÔNG được tự vận hành một database lưu trữ ciphertext của người dùng. Thành phần server (nếu có) CHỈ được phép đóng vai trò relay trao đổi OAuth token (không trạng thái, không lưu trữ), tuyệt đối không được lưu hay đọc nội dung Bookmark/Note đã mã hóa.**
+>
+> **Trạng thái triển khai:** 🟦 Chưa triển khai — xem thiết kế chi tiết tại [Master_Plan_v1.2.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/Master_Plan_v1.2.md) Sub-phase 10.4. Kiến trúc đa-provider (Dropbox/WebDAV/iCloud) có thể bổ sung sau theo cùng interface `CloudSyncProvider`, miễn là tuân thủ nguyên tắc E2EE (BR-P2-CLOUD-002) và không tự lưu ciphertext trên server riêng.
+
+**Rủi ro chính**: (1) Phụ thuộc tài khoản Google — không hỗ trợ người dùng không dùng Google; (2) OAuth Consent Screen verification overhead khi mở rộng người dùng; (3) Token refresh cần route relay tối giản, có rủi ro vận hành nhỏ hơn nhiều so với tự host database. **Mitigation**: Thiết kế `CloudSyncProvider` như một interface trừu tượng để dễ bổ sung provider thay thế (kể cả self-hosted WebDAV cho người dùng kỹ thuật) mà không phá vỡ BR-P2-CLOUD-002/003/004.
 
 ---
 
@@ -768,25 +789,26 @@ Recommendation Algorithm (gợi ý Podcast nên nghe) mâu thuẫn trực tiếp
 
 ## 12.8 Tổng hợp Business Rules Phase 2 (v2.0)
 
-| Mã              | Tên ngắn                                | Domain    | Loại quyết định                                       |
-| --------------- | --------------------------------------- | --------- | ----------------------------------------------------- |
-| BR-P2-OFF-001   | Download for Offline (RSS Episode)      | Offline   | 🟢 Nên làm ngay (hoàn thiện MVP còn dang dở)          |
-| BR-P2-OFF-002   | Màn hình quản lý Offline tập trung      | Offline   | 🟢 Nên làm                                            |
-| BR-P2-CLOUD-001 | Cloud Sync opt-in tuyệt đối             | Cloud     | 🟡 Cân nhắc — theo nhu cầu người dùng                 |
-| BR-P2-CLOUD-002 | Mã hóa đầu-cuối (E2EE)                  | Cloud     | 🟡 Bắt buộc NẾU làm Cloud Sync                        |
-| BR-P2-CLOUD-003 | Phạm vi đồng bộ giới hạn (không audio)  | Cloud     | 🟡 Bắt buộc NẾU làm Cloud Sync                        |
-| BR-P2-CLOUD-004 | Conflict resolution không mất dữ liệu   | Cloud     | 🟡 Bắt buộc NẾU làm Cloud Sync                        |
-| BR-P2-CLOUD-005 | Xóa tài khoản ≠ xóa dữ liệu Local       | Cloud     | 🟡 Bắt buộc NẾU làm Cloud Sync                        |
-| BR-P2-AI-001    | AI Assist opt-in, ưu tiên on-device     | AI        | 🟡 Cân nhắc — thử nghiệm P2                           |
-| BR-P2-AI-002    | Transcribe cục bộ quanh Bookmark        | AI        | 🟡 Bắt buộc NẾU làm AI STT                            |
-| BR-P2-AI-003    | Tóm tắt chỉ trên Note của user          | AI        | 🟡 Bắt buộc NẾU làm AI Summary                        |
-| BR-P2-AI-004    | Minh bạch nội dung AI-generated         | AI        | 🟡 Bắt buộc NẾU làm bất kỳ AI nào                     |
-| BR-P2-SOC-001   | Không Social Network (giữ nguyên)       | Sharing   | 🔴 Cấm vĩnh viễn                                      |
-| BR-P2-SOC-002   | Chia sẻ Bookmark đơn lẻ (static link)   | Sharing   | 🟡 Cân nhắc — phụ thuộc P2-CLOUD                      |
-| BR-P2-REC-001   | Không đề xuất nội dung mới (giữ nguyên) | Discovery | 🔴 Cấm vĩnh viễn                                      |
-| BR-P2-REC-002   | Điều hướng nội bộ không tính Recommend  | Discovery | 🟢 Được phép (không phải ngoại lệ, vốn không vi phạm) |
-| BR-P2-EXP-001   | Xuất JSON                               | Export    | 🟢 Nên làm                                            |
-| BR-P2-EXP-002   | Backup/Restore JSON toàn bộ             | Export    | 🟢 Nên làm — ưu tiên trước Cloud Sync                 |
+| Mã              | Tên ngắn                                                       | Domain    | Loại quyết định                                       |
+| --------------- | -------------------------------------------------------------- | --------- | ----------------------------------------------------- |
+| BR-P2-OFF-001   | Download for Offline (RSS Episode)                             | Offline   | 🟢 Nên làm ngay (hoàn thiện MVP còn dang dở)          |
+| BR-P2-OFF-002   | Màn hình quản lý Offline tập trung                             | Offline   | 🟢 Nên làm                                            |
+| BR-P2-CLOUD-001 | Cloud Sync opt-in tuyệt đối                                    | Cloud     | 🟡 Cân nhắc — theo nhu cầu người dùng                 |
+| BR-P2-CLOUD-002 | Mã hóa đầu-cuối (E2EE)                                         | Cloud     | 🟡 Bắt buộc NẾU làm Cloud Sync                        |
+| BR-P2-CLOUD-003 | Phạm vi đồng bộ giới hạn (không audio)                         | Cloud     | 🟡 Bắt buộc NẾU làm Cloud Sync                        |
+| BR-P2-CLOUD-004 | Conflict resolution không mất dữ liệu                          | Cloud     | 🟡 Bắt buộc NẾU làm Cloud Sync                        |
+| BR-P2-CLOUD-005 | Xóa tài khoản ≠ xóa dữ liệu Local                              | Cloud     | 🟡 Bắt buộc NẾU làm Cloud Sync                        |
+| BR-P2-CLOUD-006 | Provider mặc định = Google Drive appdata, không tự vận hành DB | Cloud     | 🟢 Khuyến nghị kiến trúc                              |
+| BR-P2-AI-001    | AI Assist opt-in, ưu tiên on-device                            | AI        | 🟡 Cân nhắc — thử nghiệm P2                           |
+| BR-P2-AI-002    | Transcribe cục bộ quanh Bookmark                               | AI        | 🟡 Bắt buộc NẾU làm AI STT                            |
+| BR-P2-AI-003    | Tóm tắt chỉ trên Note của user                                 | AI        | 🟡 Bắt buộc NẾU làm AI Summary                        |
+| BR-P2-AI-004    | Minh bạch nội dung AI-generated                                | AI        | 🟡 Bắt buộc NẾU làm bất kỳ AI nào                     |
+| BR-P2-SOC-001   | Không Social Network (giữ nguyên)                              | Sharing   | 🔴 Cấm vĩnh viễn                                      |
+| BR-P2-SOC-002   | Chia sẻ Bookmark đơn lẻ (static link)                          | Sharing   | 🟡 Cân nhắc — phụ thuộc P2-CLOUD                      |
+| BR-P2-REC-001   | Không đề xuất nội dung mới (giữ nguyên)                        | Discovery | 🔴 Cấm vĩnh viễn                                      |
+| BR-P2-REC-002   | Điều hướng nội bộ không tính Recommend                         | Discovery | 🟢 Được phép (không phải ngoại lệ, vốn không vi phạm) |
+| BR-P2-EXP-001   | Xuất JSON                                                      | Export    | 🟢 Nên làm                                            |
+| BR-P2-EXP-002   | Backup/Restore JSON toàn bộ                                    | Export    | 🟢 Nên làm — ưu tiên trước Cloud Sync                 |
 
 **Chú giải mức độ quyết định**: 🟢 Nên làm (Recommended) · 🟡 Cân nhắc/Có điều kiện (Conditional) · 🔴 Cấm vĩnh viễn (Permanently Out of Scope).
 
@@ -794,6 +816,6 @@ Recommendation Algorithm (gợi ý Podcast nên nghe) mâu thuẫn trực tiếp
 
 ---
 
-> **Tổng cộng: 35 Business Rules (v1.0 MVP) + 18 Business Rules (v2.0 Phase 2 — Section 12) | 8 Domains**
+> **Tổng cộng: 35 Business Rules (v1.0 MVP) + 19 Business Rules (v2.0 Phase 2 — Section 12) | 8 Domains**
 >
 > Tài liệu này là nền tảng để xây dựng Use Cases, User Stories, và Technical Specification cho cả MVP đã release lẫn Phase 2 sắp triển khai.

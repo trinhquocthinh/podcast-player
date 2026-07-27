@@ -14,6 +14,7 @@
 
 > **Changelog:**
 >
+> - **2026-07-26** — Cập nhật Sub-phase 10.4 (Cloud Sync): chốt kiến trúc triển khai là **Google Drive `appDataFolder`** (thay vì tự vận hành database lưu ciphertext riêng), hạ effort sizing từ L xuống M, bổ sung BR-P2-CLOUD-006 tại [Business_Rules_v1.2.md](/docs/Business_Rules_v1.2.md) §12.3, cập nhật Risk Register §6.1 (R6/R8) và bảng tổng hợp Effort Phase 10.
 > - **v1.2** (2026-07-25) — **Release Review**: Đánh dấu **Phase 0 → Phase 9 đã HOÀN THÀNH** (MVP released). Bổ sung Section 1.1 "Trạng thái triển khai thực tế" đối chiếu từng Phase với source code, ghi nhận các sai lệch so với kế hoạch gốc (adapter triển khai là `adapter-vercel` thay vì `adapter-node`; route `/api/audio-proxy` không triển khai — engine tự xử lý CORS fallback; Settings UI mới có Storage Info, chưa có Playback/Silence-Skip settings UI; nút "Download for Offline" cho RSS Episode chưa nối UI). **Viết lại toàn bộ Phase 10 thành Master Plan chi tiết cho v2.0**, chia thành 6 sub-phase (10.1 → 10.6) bám sát Business Rules mới BR-P2-* tại [Business_Rules_v1.2.md](/docs/Business_Rules_v1.2.md) §12. Bổ sung Risk Register cho Phase 2.
 > - **v1.1** (2026-07-23): Bổ sung chính sách Git Hooks (Husky + lint-staged + pre-commit/pre-push), quy tắc bắt buộc **Test-alongside Development** (mỗi function mới phải có unit test kèm theo, mỗi Feature hoàn thành phải có unit test bao phủ). Đồng bộ version với Tech-Spec v1.1 và SDD v1.1.
 > - **v1.0** (2026-07-23): Bản khởi tạo — tổng hợp từ Problem Definition, Business Rules v1.1, PRD v1.0, SDD v1.0, Tech-Spec v1.0.
@@ -498,31 +499,46 @@ flowchart LR
 
 ---
 
-### Sub-phase 10.4 — Cloud Sync (Opt-in, E2EE) — BR-P2-CLOUD-001 → 005
+### Sub-phase 10.4 — Cloud Sync (Opt-in, E2EE via Google Drive `appDataFolder`) — BR-P2-CLOUD-001 → 006
 
-**Mục tiêu:** Cho phép đồng bộ Bookmark/Settings/PlaybackState giữa nhiều thiết bị mà không vi phạm Local-First, thông qua mã hóa đầu-cuối.
+**Mục tiêu:** Cho phép đồng bộ Bookmark/Settings/PlaybackState giữa nhiều thiết bị mà không vi phạm Local-First, thông qua mã hóa đầu-cuối, sử dụng **Google Drive `appDataFolder`** của chính người dùng làm nơi lưu trữ thay vì tự vận hành database riêng (xem phân tích khả thi tại [Business_Rules_v1.2.md](file:///Users/thinhquoc/Desktop/Persional/podcast-player/docs/Business_Rules_v1.2.md) §12.3, BR-P2-CLOUD-006).
 
-**Effort sizing:** L (Large) — cần backend mới, quản lý khóa, xử lý conflict.
+**Effort sizing:** M (Medium) — hạ xuống từ L nhờ không cần tự xây database/auth server; chỉ cần 1 route OAuth relay không trạng thái + logic mã hóa/giải mã + Drive REST client.
 
-**Kiến trúc đề xuất:**
+**Kiến trúc đề xuất (đã cập nhật 2026-07-26):**
 
 ```text
-Client A ──(encrypt local, key derived from passphrase)──► Sync Server (SvelteKit API + DB, chỉ lưu ciphertext) ◄──(decrypt local)── Client B
+Client A ──(encrypt local, AES-GCM, key derived from passphrase)──► Google Drive appDataFolder
+                                                                       (thư mục ẩn, riêng cho FocusCast,
+                                                                        nằm trong Drive của chính user)
+                                                                              │
+                                                                     (revisions tự động)
+                                                                              │
+Client B ◄─────────────────────(decrypt local)───────────────────────────────┘
+
+OAuth token exchange (chỉ 1 lần/khi hết hạn):
+Client ──authorization code──► /api/auth/google/+server.ts (SvelteKit, stateless,
+                                 giữ client_secret trong env var) ──► Google OAuth
+                                 Token Endpoint ──► trả access_token + refresh_token
+                                 thẳng về client (server KHÔNG lưu trữ gì)
 ```
 
 **Checklist:**
 
-- [ ] Thiết kế schema server tối giản: 1 bảng `sync_blobs` (userId, deviceId, encryptedPayload, updatedAt) — server KHÔNG có schema hiểu được nội dung (Zero-Knowledge).
-- [ ] Chọn thư viện mã hóa client-side (Web Crypto API — AES-GCM, khóa dẫn xuất bằng PBKDF2/Argon2 từ passphrase người dùng).
-- [ ] Luồng đăng ký/đăng nhập tối giản (email + passphrase, KHÔNG lưu passphrase, chỉ lưu password hash cho auth riêng biệt với encryption key).
-- [ ] `sync-service.ts`: `pushLocalChanges()` (diff theo `updatedAt` từ lần sync trước) + `pullRemoteChanges()` + merge theo BR-P2-CLOUD-004 (Last-Write-Wins + giữ lịch sử 1 bản).
-- [ ] UI Settings: toggle "Bật Cloud Sync" mặc định TẮT (BR-P2-CLOUD-001), màn hình nhập passphrase với cảnh báo rõ ràng "Nếu quên passphrase, dữ liệu đã mã hóa KHÔNG thể khôi phục".
-- [ ] Cơ chế xóa tài khoản: xóa `sync_blobs` phía server trong ≤30 ngày, không đụng tới IndexedDB local (BR-P2-CLOUD-005).
-- [ ] Rate limiting + auth trên API sync (bảo mật, tránh abuse).
-- [ ] Unit + integration test cho encrypt/decrypt round-trip, conflict resolution, revoke account.
-- [ ] Threat model riêng cho Cloud Sync (bổ sung Risk Register §6 Phase 10 bên dưới).
+- [ ] Tạo Google Cloud Project + OAuth Client ID (loại "Web application"), khai báo scope `https://www.googleapis.com/auth/drive.appdata`.
+- [ ] Route `src/routes/api/auth/google/+server.ts`: nhận `authorization code` từ client, đổi lấy `access_token`/`refresh_token` qua Google Token Endpoint bằng `client_secret` (env var, Vercel), trả token về client — route này **không đọc/lưu bất kỳ nội dung Bookmark/Note nào** (đúng BR-P2-CLOUD-006).
+- [ ] `google-drive-sync-service.ts` (thuộc feature `sync/` hoặc `settings/infrastructure/`): `pushLocalChanges()` (upload file JSON đã mã hóa vào appdata qua `files.create`/`files.update` với `alt=media`) + `pullRemoteChanges()` (`files.list` + `files.get?alt=media`).
+- [ ] Chọn thư viện mã hóa client-side (Web Crypto API — AES-GCM, khóa dẫn xuất bằng PBKDF2/Argon2 từ passphrase người dùng). Payload mã hóa TRƯỚC khi gọi Drive API — Google không bao giờ thấy plaintext.
+- [ ] Cơ chế refresh token: lưu `refresh_token` mã hóa trong `settings` (IndexedDB); khi `access_token` hết hạn (~1h), gọi lại route relay để lấy token mới mà không cần user đăng nhập lại.
+- [ ] Conflict resolution theo BR-P2-CLOUD-004 (Last-Write-Wins theo `updatedAt`) — tận dụng Drive `revisions.list` để lấy lại bản bị ghi đè khi cần (thay vì tự code lưu lịch sử).
+- [ ] UI Settings: nút "Kết nối Google Drive" mặc định TẮT (BR-P2-CLOUD-001), màn hình nhập passphrase với cảnh báo rõ ràng "Nếu quên passphrase, dữ liệu đã mã hóa KHÔNG thể khôi phục". Hiển thị rõ ràng đây là Drive của chính người dùng, không phải server FocusCast.
+- [ ] Cơ chế "Ngắt kết nối": revoke OAuth token + gọi `files.delete` trên file appdata — xóa tức thời (nhanh hơn cam kết ≤30 ngày cũ), không đụng tới IndexedDB local (BR-P2-CLOUD-005).
+- [ ] Thiết kế `CloudSyncProvider` như một interface trừu tượng (không hardcode Google Drive) để có thể bổ sung provider khác (Dropbox, WebDAV self-hosted) sau này mà không phá vỡ BR-P2-CLOUD-002/003/004.
+- [ ] Đăng ký OAuth Consent Screen với Google, chuẩn bị Privacy Policy (yêu cầu bắt buộc để thoát chế độ "Unverified app" khi vượt quá 100 test user).
+- [ ] Unit + integration test cho encrypt/decrypt round-trip, conflict resolution, revoke access, token refresh flow (mock Google Drive API qua MSW).
+- [ ] Threat model riêng cho Cloud Sync (bổ sung Risk Register §6.1 Phase 10 bên dưới).
 
-**Exit Criteria:** Bật Cloud Sync trên Thiết bị A, tạo Bookmark → thiết bị B (cùng tài khoản, cùng passphrase) nhận được Bookmark trong thời gian hợp lý; server-side dump database không đọc được nội dung note (kiểm chứng bằng cách inspect DB thủ công).
+**Exit Criteria:** Bật Cloud Sync trên Thiết bị A (đăng nhập Google, cấp quyền `drive.appdata`), tạo Bookmark → thiết bị B (đăng nhập cùng tài khoản Google, cùng passphrase) nhận được Bookmark trong thời gian hợp lý; kiểm tra thủ công nội dung file trong Google Drive (qua Drive API `files.get`) xác nhận chỉ thấy ciphertext; "Ngắt kết nối" trên thiết bị A xóa ngay file appdata nhưng không ảnh hưởng dữ liệu local của thiết bị B.
 
 ---
 
@@ -565,16 +581,16 @@ Client A ──(encrypt local, key derived from passphrase)──► Sync Server
 
 ### Tổng hợp Effort & Ưu tiên Phase 10
 
-| Sub-phase | Tên                          | Effort             | Ưu tiên                                                           | Business Rules      |
-| --------- | ---------------------------- | ------------------ | ----------------------------------------------------------------- | ------------------- |
-| 10.1      | Hoàn thiện Offline Download  | S                  | 🟢 Cao nhất (nợ kỹ thuật từ MVP)                                  | BR-P2-OFF-001, 002  |
-| 10.2      | Export JSON + Backup/Restore | S–M                | 🟢 Cao                                                            | BR-P2-EXP-001, 002  |
-| 10.3      | Settings UI mở rộng          | S                  | 🟢 Cao                                                            | (nối tiếp Phase 7)  |
-| 10.4      | Cloud Sync (Opt-in, E2EE)    | L                  | 🟡 Trung bình — theo nhu cầu thực tế người dùng                   | BR-P2-CLOUD-001→005 |
-| 10.5      | AI Assist (Opt-in)           | L                  | 🟡 Trung bình — thử nghiệm, đo lường giá trị trước khi đầu tư sâu | BR-P2-AI-001→004    |
-| 10.6      | Sharing Bookmark tĩnh        | S (ảnh) / M (link) | 🟡 Thấp-Trung bình                                                | BR-P2-SOC-002       |
-| —         | Recommendation Algorithm     | —                  | 🔴 Không triển khai (vĩnh viễn)                                   | BR-P2-REC-001       |
-| —         | Social Network đầy đủ        | —                  | 🔴 Không triển khai (vĩnh viễn)                                   | BR-P2-SOC-001       |
+| Sub-phase | Tên                                                | Effort             | Ưu tiên                                                           | Business Rules      |
+| --------- | -------------------------------------------------- | ------------------ | ----------------------------------------------------------------- | ------------------- |
+| 10.1      | Hoàn thiện Offline Download                        | S                  | 🟢 Cao nhất (nợ kỹ thuật từ MVP)                                  | BR-P2-OFF-001, 002  |
+| 10.2      | Export JSON + Backup/Restore                       | S–M                | 🟢 Cao                                                            | BR-P2-EXP-001, 002  |
+| 10.3      | Settings UI mở rộng                                | S                  | 🟢 Cao                                                            | (nối tiếp Phase 7)  |
+| 10.4      | Cloud Sync (Opt-in, E2EE qua Google Drive appdata) | M                  | 🟡 Trung bình — theo nhu cầu thực tế người dùng                   | BR-P2-CLOUD-001→006 |
+| 10.5      | AI Assist (Opt-in)                                 | L                  | 🟡 Trung bình — thử nghiệm, đo lường giá trị trước khi đầu tư sâu | BR-P2-AI-001→004    |
+| 10.6      | Sharing Bookmark tĩnh                              | S (ảnh) / M (link) | 🟡 Thấp-Trung bình                                                | BR-P2-SOC-002       |
+| —         | Recommendation Algorithm                           | —                  | 🔴 Không triển khai (vĩnh viễn)                                   | BR-P2-REC-001       |
+| —         | Social Network đầy đủ                              | —                  | 🔴 Không triển khai (vĩnh viễn)                                   | BR-P2-SOC-001       |
 
 ---
 
@@ -600,14 +616,15 @@ Bổ sung theo Tech-Spec §7.1 (threat model kỹ thuật):
 
 ## 6.1 Risk Register bổ sung cho Phase 10 (v2.0)
 
-| #   | Risk                                                                 | Likelihood | Impact                     | Mitigation                                                                                                | Sub-phase  |
-| --- | -------------------------------------------------------------------- | ---------- | -------------------------- | --------------------------------------------------------------------------------------------------------- | ---------- |
-| R6  | Cloud Sync server bị xâm nhập, lộ ciphertext                         | Trung bình | Thấp (nếu E2EE đúng chuẩn) | E2EE bắt buộc (BR-P2-CLOUD-002), server Zero-Knowledge, audit bảo mật trước khi ra mắt public             | 10.4       |
-| R7  | Người dùng quên passphrase Cloud Sync → mất khả năng giải mã         | Cao        | Cao                        | Cảnh báo rõ ràng trước khi bật, cân nhắc cơ chế recovery-key riêng (trade-off bảo mật vs UX)              | 10.4       |
-| R8  | Chi phí vận hành Cloud Sync/AI Cloud vượt ngân sách side-project     | Trung bình | Trung bình                 | Giới hạn usage, ưu tiên on-device AI, cân nhắc mô hình self-hosted cho Cloud Sync                         | 10.4, 10.5 |
-| R9  | Model AI on-device kích thước lớn làm chậm tải trang / bundle size   | Cao        | Trung bình                 | Lazy-load model chỉ khi user bật AI Assist; dùng model nén (quantized) kích thước nhỏ                     | 10.5       |
-| R10 | Nhầm lẫn ranh giới Sharing (10.6) với Social Network bị cấm          | Thấp       | Cao                        | Review kỹ trước khi code: KHÔNG thêm feed/follow/public profile dưới bất kỳ hình thức nào (BR-P2-SOC-001) | 10.6       |
-| R11 | Transcribe AI vi phạm bản quyền nội dung podcast nếu mở rộng phạm vi | Thấp       | Cao                        | Giới hạn cứng phạm vi transcribe theo BR-P2-AI-002 (chỉ đoạn ngắn quanh Bookmark, không toàn Episode)     | 10.5       |
+| #   | Risk                                                                                                    | Likelihood | Impact                     | Mitigation                                                                                                                                        | Sub-phase |
+| --- | ------------------------------------------------------------------------------------------------------- | ---------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| R6  | Google tài khoản người dùng bị xâm nhập → lộ quyền truy cập file appdata (ciphertext)                   | Trung bình | Thấp (nếu E2EE đúng chuẩn) | E2EE bắt buộc (BR-P2-CLOUD-002) khiến ciphertext vô nghĩa dù lộ quyền truy cập; scope `drive.appdata` không cho thấy/ảnh hưởng file khác của user | 10.4      |
+| R7  | Người dùng quên passphrase Cloud Sync → mất khả năng giải mã                                            | Cao        | Cao                        | Cảnh báo rõ ràng trước khi bật, cân nhắc cơ chế recovery-key riêng (trade-off bảo mật vs UX)                                                      | 10.4      |
+| R8  | OAuth Consent Screen chưa verify → cảnh báo "Unverified app" ảnh hưởng UX/uy tín khi mở rộng người dùng | Trung bình | Trung bình                 | Chuẩn bị Privacy Policy + nộp verification sớm với Google trước khi vượt 100 test user                                                            | 10.4      |
+| R9  | Model AI on-device kích thước lớn làm chậm tải trang / bundle size                                      | Cao        | Trung bình                 | Lazy-load model chỉ khi user bật AI Assist; dùng model nén (quantized) kích thước nhỏ                                                             | 10.5      |
+| R10 | Nhầm lẫn ranh giới Sharing (10.6) với Social Network bị cấm                                             | Thấp       | Cao                        | Review kỹ trước khi code: KHÔNG thêm feed/follow/public profile dưới bất kỳ hình thức nào (BR-P2-SOC-001)                                         | 10.6      |
+| R11 | Transcribe AI vi phạm bản quyền nội dung podcast nếu mở rộng phạm vi                                    | Thấp       | Cao                        | Giới hạn cứng phạm vi transcribe theo BR-P2-AI-002 (chỉ đoạn ngắn quanh Bookmark, không toàn Episode)                                             | 10.5      |
+| R12 | Chi phí API AI Cloud (fallback khi không dùng on-device) vượt ngân sách side-project                    | Trung bình | Trung bình                 | Ưu tiên on-device AI mặc định, giới hạn số lần gọi Cloud AI/tháng nếu bật fallback                                                                | 10.5      |
 
 ---
 
@@ -666,7 +683,7 @@ Một feature (F0x) được coi là **Done** khi:
 [ ] Phase 10.1 — Hoàn thiện Offline Download (RSS episode UI)
 [ ] Phase 10.2 — Export JSON + Backup/Restore toàn bộ dữ liệu
 [ ] Phase 10.3 — Settings UI mở rộng (Silence Skip threshold, Playback defaults)
-[ ] Phase 10.4 — Cloud Sync (Opt-in, End-to-End Encrypted)
+[ ] Phase 10.4 — Cloud Sync (Opt-in, End-to-End Encrypted qua Google Drive appdata)
 [ ] Phase 10.5 — AI Assist (Opt-in, on-device ưu tiên: Transcribe quanh Bookmark, Tóm tắt Note)
 [ ] Phase 10.6 — Chia sẻ Bookmark tĩnh (Static Sharing, có điều kiện)
 ```

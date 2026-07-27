@@ -4,7 +4,9 @@
 	import { offlineService } from '$lib/features/library/infrastructure/offline-service';
 	import { toastState } from '$lib/core/ui/toastState.svelte';
 
-	let offlineTracks = liveQuery(() => db.tracks.where('offlineAvailable').equals('true').toArray());
+	let offlineTracks = liveQuery(() =>
+		db.tracks.filter((t) => t.offlineAvailable === true).toArray()
+	);
 
 	function formatBytes(bytes?: number) {
 		if (!bytes) return '0 B';
