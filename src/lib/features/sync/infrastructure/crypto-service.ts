@@ -87,7 +87,7 @@ export async function decrypt(encrypted: string, passphrase: string): Promise<st
 
 	try {
 		const plainBuffer = await crypto.subtle.decrypt(
-			{ name: 'AES-GCM', iv },
+			{ name: 'AES-GCM', iv: iv as unknown as BufferSource },
 			key,
 			ciphertext as unknown as BufferSource
 		);

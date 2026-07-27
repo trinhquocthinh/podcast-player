@@ -4,6 +4,7 @@
 	import SilenceSkipSettings from '$lib/features/settings/ui/SilenceSkipSettings.svelte';
 	import ThemeSettings from '$lib/features/settings/ui/ThemeSettings.svelte';
 	import CloudSyncSettings from '$lib/features/settings/ui/CloudSyncSettings.svelte';
+	import AiAssistSettings from '$lib/features/settings/ui/AiAssistSettings.svelte';
 </script>
 
 <div class="page-container">
@@ -55,6 +56,7 @@
 			</a>
 		</section>
 
+		<AiAssistSettings />
 		<CloudSyncSettings />
 	</div>
 </div>

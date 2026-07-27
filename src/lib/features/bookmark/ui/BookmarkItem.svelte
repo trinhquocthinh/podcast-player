@@ -7,10 +7,28 @@
 	import BookmarkEditor from './BookmarkEditor.svelte';
 	import { dialogState } from '$lib/core/ui/dialogState.svelte';
 	import { toastState } from '$lib/core/ui/toastState.svelte';
+	import { aiService } from '$lib/features/ai/infrastructure/ai-service';
+	import { settingsService } from '$lib/features/settings/infrastructure/settings-service';
+	import { db } from '$lib/core/db';
+	import { onMount, onDestroy } from 'svelte';
 
 	let { bookmark } = $props<{ bookmark: Bookmark }>();
 
 	let isEditing = $state(false);
+	let isAiAssistEnabled = $state(false);
+	let isTranscribing = $state(false);
+
+	let aiSub: { unsubscribe: () => void } | undefined;
+
+	onMount(() => {
+		aiSub = settingsService.observeAiAssistEnabled().subscribe((val) => {
+			isAiAssistEnabled = val;
+		});
+	});
+
+	onDestroy(() => {
+		if (aiSub) aiSub.unsubscribe();
+	});
 
 	function playFromBookmark() {
 		if (bookmark.orphaned) {
@@ -48,6 +66,36 @@
 			}
 		});
 	}
+
+	async function handleTranscribe() {
+		if (isTranscribing) return;
+
+		try {
+			isTranscribing = true;
+			const track = await db.tracks.get(bookmark.trackId);
+			if (!track) throw new Error('Không tìm thấy track');
+
+			// Transcribe segment (30s max around bookmark)
+			const endSec = bookmark.timestampStart + 30;
+			const text = await aiService.transcribeSegment(
+				track.audioUrl,
+				bookmark.timestampStart,
+				endSec
+			);
+
+			// Append text to note
+			const newNote = bookmark.note
+				? `${bookmark.note}\n\n[AI Transcript]\n${text}`
+				: `[AI Transcript]\n${text}`;
+			await bookmarkService.updateBookmarkNote(bookmark.id, newNote);
+			toastState.add('success', 'Đã chuyển giọng nói thành văn bản');
+		} catch (error: unknown) {
+			console.error(error);
+			toastState.add('error', (error as Error).message || 'Lỗi khi transcribe');
+		} finally {
+			isTranscribing = false;
+		}
+	}
 </script>
 
 <div class="bookmark-item" class:orphaned={bookmark.orphaned}>
@@ -69,6 +117,20 @@
 		</button>
 
 		<div class="actions">
+			{#if isAiAssistEnabled}
+				<button
+					class="icon-btn ai-btn"
+					onclick={handleTranscribe}
+					disabled={isTranscribing}
+					title="Transcribe bằng AI"
+				>
+					{#if isTranscribing}
+						<span class="spinner"></span>
+					{:else}
+						✨
+					{/if}
+				</button>
+			{/if}
 			<button class="icon-btn" onclick={() => (isEditing = !isEditing)} title="Edit Note">
 				<svg
 					width="16"
@@ -168,11 +230,32 @@
 		align-items: center;
 		justify-content: center;
 	}
-	.icon-btn:hover {
+	.icon-btn:hover:not(:disabled) {
 		background: var(--surface-2, #333);
 		color: var(--text-primary, #fff);
 	}
-	.icon-btn.delete:hover {
+	.icon-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+	.ai-btn {
+		font-size: 1rem;
+	}
+	.spinner {
+		display: inline-block;
+		width: 14px;
+		height: 14px;
+		border: 2px solid rgba(255, 255, 255, 0.3);
+		border-radius: 50%;
+		border-top-color: #fff;
+		animation: spin 1s ease-in-out infinite;
+	}
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+	.icon-btn.delete:hover:not(:disabled) {
 		color: var(--error, #e74c3c);
 		background: rgba(231, 76, 60, 0.1);
 	}

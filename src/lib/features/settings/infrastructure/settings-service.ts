@@ -13,7 +13,11 @@ export const SETTING_KEYS = {
 	CLOUD_SYNC_ENABLED: 'cloud_sync_enabled',
 	CLOUD_SYNC_PROVIDER: 'cloud_sync_provider',
 	CLOUD_SYNC_PASSPHRASE_TOKEN: 'cloud_sync_passphrase_token',
-	CLOUD_SYNC_LAST_SYNC: 'cloud_sync_last_sync'
+	CLOUD_SYNC_LAST_SYNC: 'cloud_sync_last_sync',
+	// AI Assist (Sub-phase 10.5)
+	AI_ASSIST_ENABLED: 'ai_assist_enabled',
+	AI_USE_CLOUD: 'ai_use_cloud',
+	AI_CLOUD_API_KEY: 'ai_cloud_api_key'
 };
 
 export class SettingsService {
@@ -131,6 +135,44 @@ export class SettingsService {
 
 	async getCloudSyncLastSync(): Promise<string | null> {
 		return this.getSetting<string | null>(SETTING_KEYS.CLOUD_SYNC_LAST_SYNC, null);
+	}
+
+	// --- AI Assist Settings (Sub-phase 10.5) ---
+
+	async isAiAssistEnabled(): Promise<boolean> {
+		return this.getSetting<boolean>(SETTING_KEYS.AI_ASSIST_ENABLED, false);
+	}
+
+	async setAiAssistEnabled(value: boolean): Promise<void> {
+		await this.setSetting(SETTING_KEYS.AI_ASSIST_ENABLED, value);
+	}
+
+	observeAiAssistEnabled() {
+		return this.observeSetting<boolean>(SETTING_KEYS.AI_ASSIST_ENABLED, false);
+	}
+
+	async isAiUseCloud(): Promise<boolean> {
+		return this.getSetting<boolean>(SETTING_KEYS.AI_USE_CLOUD, false);
+	}
+
+	async setAiUseCloud(value: boolean): Promise<void> {
+		await this.setSetting(SETTING_KEYS.AI_USE_CLOUD, value);
+	}
+
+	observeAiUseCloud() {
+		return this.observeSetting<boolean>(SETTING_KEYS.AI_USE_CLOUD, false);
+	}
+
+	async getAiCloudApiKey(): Promise<string> {
+		return this.getSetting<string>(SETTING_KEYS.AI_CLOUD_API_KEY, '');
+	}
+
+	async setAiCloudApiKey(value: string): Promise<void> {
+		await this.setSetting(SETTING_KEYS.AI_CLOUD_API_KEY, value);
+	}
+
+	observeAiCloudApiKey() {
+		return this.observeSetting<string>(SETTING_KEYS.AI_CLOUD_API_KEY, '');
 	}
 }
 
