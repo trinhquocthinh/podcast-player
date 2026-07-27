@@ -107,8 +107,8 @@
 			const t = await db.tracks.get(bookmark.trackId);
 			if (t) {
 				shareTrack = t;
-				if (t.podcastId) {
-					sharePodcast = await db.podcasts.get(t.podcastId);
+				if (t.podcastFeedUrl) {
+					sharePodcast = await db.podcasts.get(t.podcastFeedUrl);
 				}
 				isSharing = true;
 			} else {

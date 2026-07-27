@@ -7,7 +7,7 @@
 	let error = $state('');
 	let successMsg = $state('');
 	let warningMsg = $state('');
-	let duplicateFeedUrl = $state(''); // Track URL trùng để gợi ý Refresh
+	let duplicateFeedUrl = $state('');
 	let refreshResult = $state('');
 
 	let fileInput: HTMLInputElement;
@@ -29,9 +29,7 @@
 		} catch (err: any) {
 			if (err instanceof AppError) {
 				error = err.message;
-				// BR-SRC-003: Gợi ý Refresh khi feed đã tồn tại
 				if (err.code === 'ALREADY_EXISTS') {
-					// Sử dụng feedUrl đã resolve (RSS thực) nếu có, fallback về URL user nhập
 					duplicateFeedUrl = err.details?.feedUrl || feedUrl;
 				}
 			} else {
@@ -84,7 +82,6 @@
 		try {
 			const result = await library.addLocalFile(file);
 			successMsg = 'Đã thêm file audio cục bộ!';
-			// BR-SRC-002: Hiển thị cảnh báo dung lượng nếu có
 			if (result.warning) {
 				warningMsg = result.warning;
 			}
@@ -102,207 +99,98 @@
 	}
 </script>
 
-<div class="add-feed-container">
-	<h3>Thêm nguồn phát</h3>
+<div class="glass-card rounded-2xl p-6 border border-slate-700/50 mt-8 shadow-lg">
+	<h3 class="text-lg font-semibold text-white mb-4">Thêm nguồn phát mới</h3>
 
-	<div class="form-group">
-		<label for="rss-url">Từ RSS Feed hoặc link Apple Podcasts</label>
-		<p class="hint">
-			Hỗ trợ dán trực tiếp link Apple Podcasts, Pocket Casts. Không hỗ trợ Spotify.
-		</p>
-		<div class="input-row">
+	<div class="space-y-4">
+		<div>
+			<label for="rss-url" class="block text-sm font-medium text-slate-300 mb-1"
+				>Từ RSS Feed hoặc link Apple Podcasts</label
+			>
+			<p class="text-xs text-slate-500 mb-2 italic">
+				Hỗ trợ dán trực tiếp link Apple Podcasts, Pocket Casts. Không hỗ trợ Spotify.
+			</p>
+
+			<div class="flex flex-col sm:flex-row gap-2">
+				<input
+					id="rss-url"
+					type="url"
+					placeholder="https://example.com/feed.xml"
+					bind:value={feedUrl}
+					disabled={isLoading}
+					class="flex-1 bg-slate-800 text-sm text-white rounded-xl px-4 py-3 outline-none border border-slate-700 focus:border-indigo-500 transition-colors placeholder:text-slate-500"
+				/>
+				<button
+					onclick={handleAddRSS}
+					disabled={isLoading || !feedUrl}
+					class="px-6 py-3 rounded-xl font-medium text-white transition-all bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-lg shadow-indigo-500/20"
+				>
+					{isLoading ? 'Đang thêm...' : 'Thêm Podcast'}
+				</button>
+			</div>
+		</div>
+
+		<div class="relative flex items-center py-4">
+			<div class="flex-grow border-t border-slate-700"></div>
+			<span class="flex-shrink-0 mx-4 text-xs font-semibold tracking-wider text-slate-500 uppercase"
+				>Hoặc</span
+			>
+			<div class="flex-grow border-t border-slate-700"></div>
+		</div>
+
+		<div>
+			<label for="local-file" class="block text-sm font-medium text-slate-300 mb-2"
+				>Từ file máy tính (MP3, M4A, WAV)</label
+			>
 			<input
-				id="rss-url"
-				type="url"
-				placeholder="https://example.com/feed.xml"
-				bind:value={feedUrl}
+				type="file"
+				id="local-file"
+				accept="audio/mpeg,audio/mp4,audio/wav,audio/ogg"
+				bind:this={fileInput}
+				onchange={handleAddLocalFile}
 				disabled={isLoading}
+				class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-500/10 file:text-indigo-400 hover:file:bg-indigo-500/20 cursor-pointer"
 			/>
-			<button onclick={handleAddRSS} disabled={isLoading || !feedUrl}>
-				{isLoading ? 'Đang thêm...' : 'Thêm Podcast'}
-			</button>
 		</div>
 	</div>
 
-	<div class="form-group divider">
-		<span>HOẶC</span>
-	</div>
-
-	<div class="form-group">
-		<label for="local-file">Từ file máy tính (MP3, M4A, WAV)</label>
-		<input
-			type="file"
-			id="local-file"
-			accept="audio/mpeg,audio/mp4,audio/wav,audio/ogg"
-			bind:this={fileInput}
-			onchange={handleAddLocalFile}
-			disabled={isLoading}
-		/>
-	</div>
-
+	<!-- Thông báo trạng thái -->
 	{#if error}
-		<p class="error">{error}</p>
-		{#if duplicateFeedUrl}
-			<button class="refresh-suggest-btn" onclick={handleRefreshExisting} disabled={isLoading}>
-				🔄 {isLoading ? 'Đang làm mới...' : 'Làm mới Feed này thay vì thêm mới'}
-			</button>
-		{/if}
+		<div class="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm">
+			{error}
+			{#if duplicateFeedUrl}
+				<button
+					onclick={handleRefreshExisting}
+					disabled={isLoading}
+					class="mt-2 w-full py-2 bg-slate-800 border border-indigo-500/50 hover:bg-indigo-500/20 rounded-lg text-indigo-300 font-medium transition-colors"
+				>
+					🔄 {isLoading ? 'Đang làm mới...' : 'Làm mới Feed này thay vì thêm mới'}
+				</button>
+			{/if}
+		</div>
 	{/if}
+
 	{#if refreshResult}
-		<p class="success">{refreshResult}</p>
+		<div
+			class="mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 text-sm"
+		>
+			{refreshResult}
+		</div>
 	{/if}
+
 	{#if warningMsg}
-		<p class="warning">⚠️ {warningMsg}</p>
+		<div
+			class="mt-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400 text-sm"
+		>
+			⚠️ {warningMsg}
+		</div>
 	{/if}
+
 	{#if successMsg}
-		<p class="success">{successMsg}</p>
+		<div
+			class="mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 text-sm"
+		>
+			✓ {successMsg}
+		</div>
 	{/if}
 </div>
-
-<style>
-	.add-feed-container {
-		background: var(--surface-2, #1f2937);
-		padding: 1.5rem;
-		border-radius: 8px;
-		margin-bottom: 2rem;
-		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-	}
-
-	h3 {
-		margin-top: 0;
-		margin-bottom: 1rem;
-		font-size: 1.2rem;
-		color: var(--text-1, #f3f4f6);
-	}
-
-	.form-group {
-		margin-bottom: 1rem;
-	}
-
-	label {
-		display: block;
-		font-size: 0.9rem;
-		color: var(--text-2, #9ca3af);
-	}
-
-	.input-row {
-		display: flex;
-		gap: 0.5rem;
-		margin-top: 0.5rem;
-	}
-
-	input[type='url'] {
-		flex: 1;
-		padding: 0.75rem;
-		border: 1px solid var(--border, #374151);
-		border-radius: 6px;
-		background: var(--surface-1, #111827);
-		color: var(--text-1, #f3f4f6);
-	}
-
-	input[type='url']:focus {
-		outline: 2px solid var(--primary, #3b82f6);
-	}
-
-	input[type='file'] {
-		margin-top: 0.5rem;
-		color: var(--text-2, #9ca3af);
-	}
-
-	button {
-		padding: 0.75rem 1.5rem;
-		background: var(--primary, #3b82f6);
-		color: white;
-		border: none;
-		border-radius: 6px;
-		cursor: pointer;
-		font-weight: 500;
-		transition: background 0.2s;
-	}
-
-	button:hover:not(:disabled) {
-		background: var(--primary-hover, #2563eb);
-	}
-
-	button:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	.divider {
-		text-align: center;
-		color: var(--text-3, #6b7280);
-		font-size: 0.85rem;
-		margin: 1.5rem 0;
-		position: relative;
-	}
-
-	.divider::before,
-	.divider::after {
-		content: '';
-		position: absolute;
-		top: 50%;
-		width: 40%;
-		height: 1px;
-		background: var(--border, #374151);
-	}
-
-	.divider::before {
-		left: 0;
-	}
-	.divider::after {
-		right: 0;
-	}
-
-	.error {
-		color: var(--danger, #ef4444);
-		font-size: 0.9rem;
-		margin-top: 1rem;
-	}
-
-	.success {
-		color: var(--success, #10b981);
-		font-size: 0.9rem;
-		margin-top: 1rem;
-	}
-
-	.warning {
-		color: var(--warning, #f59e0b);
-		font-size: 0.9rem;
-		margin-top: 0.75rem;
-		padding: 0.75rem;
-		background: rgba(245, 158, 11, 0.1);
-		border: 1px solid rgba(245, 158, 11, 0.3);
-		border-radius: 6px;
-	}
-
-	.hint {
-		font-size: 0.8rem;
-		color: var(--text-3, #6b7280);
-		margin: 0.25rem 0 0 0;
-		font-style: italic;
-	}
-
-	.refresh-suggest-btn {
-		margin-top: 0.75rem;
-		padding: 0.6rem 1.2rem;
-		background: var(--surface-3, #374151);
-		color: var(--text-1, #f3f4f6);
-		border: 1px solid var(--primary, #3b82f6);
-		border-radius: 6px;
-		cursor: pointer;
-		font-weight: 500;
-		font-size: 0.9rem;
-		transition: all 0.2s;
-		width: 100%;
-	}
-
-	.refresh-suggest-btn:hover:not(:disabled) {
-		background: var(--primary, #3b82f6);
-	}
-
-	.refresh-suggest-btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-</style>

@@ -1,88 +1,43 @@
 <script lang="ts">
 	import type { Podcast } from '$lib/core/db';
+	import { Headphones } from 'lucide-svelte';
 
 	let { podcast } = $props<{ podcast: Podcast }>();
 </script>
 
-<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-<a href="/podcast/{encodeURIComponent(podcast.feedUrl)}" class="podcast-card">
-	{#if podcast.coverImage}
-		<img
-			src={podcast.coverImage}
-			alt={podcast.title}
-			loading="lazy"
-			onerror={(e) => {
-				const img = e.currentTarget as HTMLImageElement;
-				img.style.display = 'none';
-				if (img.nextElementSibling) {
-					(img.nextElementSibling as HTMLElement).style.display = 'flex';
-				}
-			}}
-		/>
-		<div class="fallback-cover" style="display: none;">
-			<span class="fallback-icon">🎧</span>
-		</div>
-	{:else}
-		<div class="fallback-cover">
-			<span class="fallback-icon">🎧</span>
-		</div>
-	{/if}
-	<div class="info">
-		<h4>{podcast.title}</h4>
-		<p>{podcast.author}</p>
+<a href="/podcast/{encodeURIComponent(podcast.feedUrl)}" class="group cursor-pointer block">
+	<div
+		class="relative w-full aspect-square rounded-2xl overflow-hidden mb-3 shadow-md shadow-black/20 group-hover:shadow-indigo-500/20 transition-all duration-300 bg-slate-800"
+	>
+		{#if podcast.coverImage}
+			<img
+				src={podcast.coverImage}
+				alt={podcast.title}
+				loading="lazy"
+				class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+				onerror={(e) => {
+					const img = e.currentTarget as HTMLImageElement;
+					img.style.display = 'none';
+					if (img.nextElementSibling) {
+						(img.nextElementSibling as HTMLElement).style.display = 'flex';
+					}
+				}}
+			/>
+			<div class="hidden w-full h-full items-center justify-center bg-slate-800">
+				<Headphones class="w-12 h-12 text-slate-600 opacity-50" />
+			</div>
+		{:else}
+			<div class="flex w-full h-full items-center justify-center bg-slate-800">
+				<Headphones class="w-12 h-12 text-slate-600 opacity-50" />
+			</div>
+		{/if}
 	</div>
+	<h3
+		class="font-semibold text-slate-200 text-sm line-clamp-1 group-hover:text-white transition-colors"
+	>
+		{podcast.title}
+	</h3>
+	<p class="text-xs text-slate-500 mt-1 line-clamp-1">
+		{podcast.author || 'Unknown Author'}
+	</p>
 </a>
-
-<style>
-	.podcast-card {
-		display: flex;
-		flex-direction: column;
-		background: var(--surface-2, #1f2937);
-		border-radius: 8px;
-		overflow: hidden;
-		text-decoration: none;
-		color: var(--text-1, #f3f4f6);
-		transition:
-			transform 0.2s,
-			box-shadow 0.2s;
-	}
-	.podcast-card:hover {
-		transform: translateY(-4px);
-		box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
-	}
-	img,
-	.fallback-cover {
-		width: 100%;
-		aspect-ratio: 1 / 1;
-		object-fit: cover;
-		background: var(--surface-3, #374151);
-	}
-	.fallback-cover {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-	.fallback-icon {
-		font-size: 4rem;
-		opacity: 0.5;
-	}
-	.info {
-		padding: 1rem;
-	}
-	h4 {
-		margin: 0 0 0.5rem 0;
-		font-size: 1rem;
-		display: -webkit-box;
-		-webkit-line-clamp: 2;
-		-webkit-box-orient: vertical;
-		overflow: hidden;
-	}
-	p {
-		margin: 0;
-		font-size: 0.85rem;
-		color: var(--text-2, #9ca3af);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-</style>

@@ -23,6 +23,7 @@ export class Player {
 	private saveInterval: ReturnType<typeof setInterval> | null = null;
 	private pendingStartPos: number = 0;
 	private pendingSpeed: number = 1.0;
+	private pendingAutoplay: boolean = true;
 	private currentBlobUrl: string | null = null; // Blob URL tạo on-the-fly, cần revoke khi cleanup
 	private mediaSessionService: MediaSessionService | null = null;
 
@@ -51,6 +52,23 @@ export class Player {
 			}
 		})();
 
+		// Restore last played track
+		(async () => {
+			try {
+				const states = await db.playbackState.toArray();
+				if (states.length > 0) {
+					// Sort in memory since updatedAt is not indexed
+					states.sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
+					const track = await db.tracks.get(states[0].trackId);
+					if (track) {
+						this.selectTrack(track, false);
+					}
+				}
+			} catch (e) {
+				console.error('Failed to load last playback state', e);
+			}
+		})();
+
 		// Bind engine events
 		audioEngine.onLoadSuccess = () => {
 			if (this.status === PlaybackStatus.LOADING) {
@@ -71,12 +89,16 @@ export class Player {
 					this.pendingSpeed = 1.0;
 				}
 
-				this.status = PlaybackStatus.PLAYING;
-				audioEngine.play().catch((err) => {
-					this.status = PlaybackStatus.ERROR;
-					this.error = err;
-				});
-				this.startPeriodicSave();
+				if (this.pendingAutoplay) {
+					this.status = PlaybackStatus.PLAYING;
+					audioEngine.play().catch((err) => {
+						this.status = PlaybackStatus.ERROR;
+						this.error = err;
+					});
+					this.startPeriodicSave();
+				} else {
+					this.status = PlaybackStatus.PAUSED;
+				}
 
 				if (this.currentTrack) {
 					let artworkUrl = undefined;
@@ -159,7 +181,7 @@ export class Player {
 		});
 	}
 
-	async selectTrack(track: Track) {
+	async selectTrack(track: Track, autoplay: boolean = true) {
 		if (
 			this.currentTrack &&
 			this.status !== PlaybackStatus.STOPPED &&
@@ -171,6 +193,7 @@ export class Player {
 		this.currentTrack = track;
 		this.status = PlaybackStatus.LOADING;
 		this.error = null;
+		this.pendingAutoplay = autoplay;
 
 		// Recover position
 		try {

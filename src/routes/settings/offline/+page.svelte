@@ -3,6 +3,7 @@
 	import { liveQuery } from 'dexie';
 	import { offlineService } from '$lib/features/library/infrastructure/offline-service';
 	import { toastState } from '$lib/core/ui/toastState.svelte';
+	import { Trash } from 'lucide-svelte';
 
 	let offlineTracks = liveQuery(() =>
 		db.tracks.filter((t) => t.offlineAvailable === true).toArray()
@@ -51,209 +52,74 @@
 	}
 </script>
 
-<div class="page-container">
-	<header>
-		<div class="title-bar">
-			<a href="/settings" class="back-btn">
-				<svg
-					width="24"
-					height="24"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-				>
-					<path d="M15 18l-6-6 6-6" />
-				</svg>
-				Cài đặt
-			</a>
-			<h1>Quản lý Tải xuống</h1>
-		</div>
+<div id="tab-offline" class="tab-content active">
+	<header class="p-6 pt-10">
+		<h1 class="text-2xl font-bold text-white tracking-tight">Quản lý bộ nhớ</h1>
+		<p class="text-sm text-slate-400 mt-1">Lưu trữ cục bộ an toàn trên thiết bị (IndexedDB)</p>
 	</header>
 
-	<main>
-		<div class="summary-card">
-			<h3>Tổng dung lượng lưu trữ</h3>
-			<div class="size-display">{formatBytes(totalSize)}</div>
-			<div class="track-count">{$offlineTracks?.length || 0} tracks đã tải</div>
+	<section class="px-6 mb-8">
+		<div class="glass-card rounded-2xl p-5 border border-slate-700/50">
+			<div class="flex justify-between items-end mb-2">
+				<div>
+					<span class="text-3xl font-bold text-white">
+						{formatBytes(totalSize).split(' ')[0]}<span class="text-lg text-slate-400 font-medium"
+							>{formatBytes(totalSize).split(' ')[1] || 'B'}</span
+						>
+					</span>
+					<span class="text-sm text-slate-400 block mt-1"
+						>Đã sử dụng ({$offlineTracks?.length || 0} tracks)</span
+					>
+				</div>
+				{#if $offlineTracks && $offlineTracks.length > 0}
+					<button
+						onclick={handleDeleteAll}
+						class="text-sm text-red-400 hover:text-red-300 font-medium transition flex items-center gap-1"
+					>
+						<Trash class="w-4 h-4" /> Dọn dẹp
+					</button>
+				{/if}
+			</div>
 
-			{#if $offlineTracks && $offlineTracks.length > 0}
-				<button class="btn danger mt-4" onclick={handleDeleteAll}>Xóa tất cả</button>
-			{/if}
+			<div class="w-full bg-slate-800 rounded-full h-2 mt-4 overflow-hidden flex">
+				<div
+					class="bg-indigo-500 h-full"
+					style="width: {totalSize > 0 ? '100%' : '0%'}"
+					title="Audio Offline"
+				></div>
+			</div>
 		</div>
+	</section>
 
-		<h2>Danh sách đã tải</h2>
+	<section class="px-6 pb-8">
+		<h2 class="text-lg font-semibold text-white mb-4">Danh sách đã tải</h2>
 
 		{#if $offlineTracks === undefined}
-			<p>Đang tải...</p>
+			<p class="text-slate-400">Đang tải...</p>
 		{:else if $offlineTracks.length === 0}
-			<p class="empty-state">Chưa có track nào được tải về.</p>
+			<div class="p-6 text-center bg-slate-800/50 rounded-xl border border-slate-700/50">
+				<p class="text-slate-400">Chưa có track nào được tải về.</p>
+			</div>
 		{:else}
-			<ul class="track-list">
+			<ul class="space-y-3">
 				{#each $offlineTracks as track (track.id)}
-					<li class="track-item">
-						<div class="track-info">
-							<h4>{track.title}</h4>
-							<span class="track-size">{formatBytes(track.fileSize)}</span>
+					<li
+						class="glass-card p-4 rounded-xl border border-slate-700/50 flex items-center justify-between group transition-colors hover:border-indigo-500/30"
+					>
+						<div class="min-w-0 flex-1 pr-4">
+							<h4 class="font-medium text-slate-200 truncate">{track.title}</h4>
+							<span class="text-xs text-slate-500 mt-1 block">{formatBytes(track.fileSize)}</span>
 						</div>
-						<button class="delete-btn" onclick={() => handleDelete(track.id)} title="Xóa">
-							<svg
-								width="20"
-								height="20"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-							>
-								<path
-									d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
-								/>
-							</svg>
+						<button
+							class="w-8 h-8 rounded-full flex items-center justify-center text-slate-500 hover:text-red-400 hover:bg-red-400/10 transition-colors"
+							onclick={() => handleDelete(track.id)}
+							title="Xóa"
+						>
+							<Trash class="w-4 h-4" />
 						</button>
 					</li>
 				{/each}
 			</ul>
 		{/if}
-	</main>
+	</section>
 </div>
-
-<style>
-	.page-container {
-		padding: 1rem;
-		max-width: 800px;
-		margin: 0 auto;
-	}
-
-	.title-bar {
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-		margin-bottom: 2rem;
-	}
-
-	.back-btn {
-		display: flex;
-		align-items: center;
-		text-decoration: none;
-		color: var(--text-2, #9ca3af);
-		font-weight: 500;
-	}
-
-	.back-btn:hover {
-		color: var(--text-1, #f3f4f6);
-	}
-
-	h1 {
-		margin: 0;
-		font-size: 1.5rem;
-		color: var(--text-1, #f3f4f6);
-	}
-
-	h2 {
-		font-size: 1.25rem;
-		margin-bottom: 1rem;
-		color: var(--text-1, #f3f4f6);
-	}
-
-	.summary-card {
-		background: var(--surface-2, #1f2937);
-		border-radius: 8px;
-		padding: 1.5rem;
-		margin-bottom: 2rem;
-		text-align: center;
-		border: 1px solid var(--border, #374151);
-	}
-
-	.summary-card h3 {
-		margin: 0 0 0.5rem 0;
-		color: var(--text-2, #9ca3af);
-		font-size: 1rem;
-		font-weight: 500;
-	}
-
-	.size-display {
-		font-size: 2.5rem;
-		font-weight: 700;
-		color: var(--text-1, #f3f4f6);
-		margin-bottom: 0.5rem;
-	}
-
-	.track-count {
-		color: var(--text-2, #9ca3af);
-		font-size: 0.9rem;
-	}
-
-	.mt-4 {
-		margin-top: 1rem;
-	}
-
-	.btn.danger {
-		background: transparent;
-		color: var(--error, #ef4444);
-		border: 1px solid var(--error, #ef4444);
-		padding: 0.5rem 1rem;
-		border-radius: 4px;
-		cursor: pointer;
-		font-weight: 500;
-		transition: all 0.2s;
-	}
-
-	.btn.danger:hover {
-		background: var(--error, #ef4444);
-		color: white;
-	}
-
-	.empty-state {
-		text-align: center;
-		color: var(--text-2, #9ca3af);
-		padding: 2rem 0;
-	}
-
-	.track-list {
-		list-style: none;
-		padding: 0;
-		margin: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-	}
-
-	.track-item {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		background: var(--surface-2, #1f2937);
-		padding: 1rem;
-		border-radius: 8px;
-		border: 1px solid var(--border, #374151);
-	}
-
-	.track-info h4 {
-		margin: 0 0 0.25rem 0;
-		font-size: 1rem;
-		color: var(--text-1, #f3f4f6);
-	}
-
-	.track-size {
-		font-size: 0.85rem;
-		color: var(--text-2, #9ca3af);
-	}
-
-	.delete-btn {
-		background: transparent;
-		border: none;
-		color: var(--text-2, #9ca3af);
-		cursor: pointer;
-		padding: 0.5rem;
-		border-radius: 4px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		transition: all 0.2s;
-	}
-
-	.delete-btn:hover {
-		color: var(--error, #ef4444);
-		background: var(--surface-3, #374151);
-	}
-</style>

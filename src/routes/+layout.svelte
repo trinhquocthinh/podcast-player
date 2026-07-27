@@ -9,9 +9,11 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import PlayerBar from '$lib/features/playback/ui/PlayerBar.svelte';
 	import BottomNav from '$lib/core/ui/BottomNav.svelte';
+	import BookmarkModal from '$lib/features/bookmark/ui/BookmarkModal.svelte';
 
 	let { children } = $props();
 	let dbReady = $state(false);
+	let isBookmarkModalOpen = $state(false);
 
 	onMount(async () => {
 		dbReady = await checkIntegrity();
@@ -40,33 +42,18 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
-<div class="app-shell">
-	<main class="main-content">
-		{@render children()}
-	</main>
+<main class="pb-40 min-h-screen relative overflow-x-hidden">
+	{@render children()}
+</main>
 
-	<!-- Player Bar -->
-	<PlayerBar />
-
-	<!-- Bottom Navigation -->
+<!-- KHU VỰC CỐ ĐỊNH: Player + Bottom Nav -->
+<div class="fixed bottom-0 left-0 w-full z-50">
+	<PlayerBar bind:isBookmarkModalOpen />
 	<BottomNav />
 </div>
 
+<!-- Modal Ghi Chú (Bottom Sheet) -->
+<BookmarkModal bind:isOpen={isBookmarkModalOpen} />
+
 <Toast />
 <ConfirmDialog />
-
-<style>
-	.app-shell {
-		display: flex;
-		flex-direction: column;
-		height: 100vh;
-		overflow: hidden;
-	}
-
-	.main-content {
-		flex: 1;
-		overflow-y: auto;
-		/* Space for raised player bar and floating bottom nav */
-		padding-bottom: calc(180px + env(safe-area-inset-bottom));
-	}
-</style>

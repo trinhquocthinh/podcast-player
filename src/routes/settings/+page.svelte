@@ -5,109 +5,62 @@
 	import ThemeSettings from '$lib/features/settings/ui/ThemeSettings.svelte';
 	import CloudSyncSettings from '$lib/features/settings/ui/CloudSyncSettings.svelte';
 	import AiAssistSettings from '$lib/features/settings/ui/AiAssistSettings.svelte';
+	import { ChevronRight } from 'lucide-svelte';
 </script>
 
-<div class="page-container">
-	<header class="page-header">
-		<h1>Cài đặt</h1>
+<div id="tab-settings" class="tab-content active">
+	<header class="p-6 pt-10">
+		<h1 class="text-2xl font-bold text-white tracking-tight">Cài đặt</h1>
 	</header>
 
-	<div class="settings-content">
+	<section class="px-6 space-y-6 pb-8">
 		<StorageInfo />
 		<PlaybackSettings />
 		<SilenceSkipSettings />
 		<ThemeSettings />
 
-		<section class="settings-section">
-			<a href="/settings/offline" class="settings-link">
-				<div class="link-content">
-					<h3>Quản lý Tải xuống</h3>
-					<p>Quản lý các track đã tải về để nghe offline</p>
-				</div>
-				<svg
-					width="24"
-					height="24"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
+		<div>
+			<h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">
+				Dữ liệu & Ngoại tuyến
+			</h2>
+			<div class="glass-card rounded-2xl overflow-hidden border border-slate-700/50">
+				<a
+					href="/settings/offline"
+					class="flex items-center justify-between p-4 hover:bg-white/5 transition-colors group"
 				>
-					<path d="M9 18l6-6-6-6" />
-				</svg>
-			</a>
+					<div>
+						<h3 class="font-medium text-slate-200 group-hover:text-white transition-colors">
+							Quản lý Tải xuống
+						</h3>
+						<p class="text-xs text-slate-400 mt-0.5">Quản lý các track đã tải về để nghe offline</p>
+					</div>
+					<ChevronRight
+						class="w-5 h-5 text-slate-500 group-hover:text-indigo-400 transition-colors"
+					/>
+				</a>
 
-			<div class="settings-divider"></div>
+				<div class="border-t border-slate-700/50"></div>
 
-			<a href="/settings/backup" class="settings-link">
-				<div class="link-content">
-					<h3>Sao lưu & Phục hồi</h3>
-					<p>Tạo bản sao lưu thư viện hoặc phục hồi từ file JSON</p>
-				</div>
-				<svg
-					width="24"
-					height="24"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
+				<a
+					href="/settings/backup"
+					class="flex items-center justify-between p-4 hover:bg-white/5 transition-colors group"
 				>
-					<path d="M9 18l6-6-6-6" />
-				</svg>
-			</a>
-		</section>
+					<div>
+						<h3 class="font-medium text-slate-200 group-hover:text-white transition-colors">
+							Sao lưu & Phục hồi
+						</h3>
+						<p class="text-xs text-slate-400 mt-0.5">
+							Tạo bản sao lưu thư viện hoặc phục hồi từ file JSON
+						</p>
+					</div>
+					<ChevronRight
+						class="w-5 h-5 text-slate-500 group-hover:text-indigo-400 transition-colors"
+					/>
+				</a>
+			</div>
+		</div>
 
 		<AiAssistSettings />
 		<CloudSyncSettings />
-	</div>
+	</section>
 </div>
-
-<style>
-	.settings-content {
-		display: flex;
-		flex-direction: column;
-		gap: 1.5rem;
-		max-width: 600px;
-		margin: 0 auto;
-		width: 100%;
-	}
-
-	.settings-section {
-		background: var(--surface-2, #1f2937);
-		border-radius: 8px;
-		border: 1px solid var(--border, #374151);
-		overflow: hidden;
-	}
-
-	.settings-link {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 1rem;
-		text-decoration: none;
-		color: var(--text-1, #f3f4f6);
-		transition: background 0.2s;
-	}
-
-	.settings-link:hover {
-		background: var(--surface-3, #374151);
-	}
-
-	.link-content h3 {
-		margin: 0 0 0.25rem 0;
-		font-size: 1rem;
-	}
-
-	.link-content p {
-		margin: 0;
-		font-size: 0.85rem;
-		color: var(--text-2, #9ca3af);
-	}
-
-	.settings-divider {
-		border-top: 1px solid var(--border, #374151);
-	}
-
-	.settings-link svg {
-		color: var(--text-2, #9ca3af);
-	}
-</style>
