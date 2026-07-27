@@ -66,7 +66,7 @@
 	.main-content {
 		flex: 1;
 		overflow-y: auto;
-		/* Space for player bar (approx 80-120px) + bottom nav (approx 65px) */
-		padding-bottom: calc(140px + env(safe-area-inset-bottom));
+		/* Space for raised player bar and floating bottom nav */
+		padding-bottom: calc(180px + env(safe-area-inset-bottom));
 	}
 </style>

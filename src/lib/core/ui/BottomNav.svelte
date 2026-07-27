@@ -21,21 +21,6 @@
 		</svg>
 		<span>Thư viện</span>
 	</a>
-
-	<a href="/bookmarks" class="nav-item" class:active={$page.url.pathname.startsWith('/bookmarks')}>
-		<svg
-			width="24"
-			height="24"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			stroke-width="2"
-		>
-			<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-		</svg>
-		<span>Ghi chú</span>
-	</a>
-
 	<a href="/settings" class="nav-item" class:active={$page.url.pathname.startsWith('/settings')}>
 		<svg
 			width="24"
@@ -57,34 +42,39 @@
 <style>
 	.bottom-nav {
 		position: fixed;
-		bottom: 0;
-		left: 0;
-		right: 0;
-		background: var(--surface-1, #1a1a1a);
-		border-top: 1px solid var(--border, #333);
+		bottom: calc(16px + env(safe-area-inset-bottom));
+		left: 50%;
+		transform: translateX(-50%);
+		background: rgba(30, 30, 30, 0.85); /* Slightly lighter for glass effect */
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
+		border: 1px solid rgba(255, 255, 255, 0.1);
 		display: flex;
-		justify-content: space-around;
+		justify-content: center;
 		align-items: center;
-		padding: 8px 0;
-		padding-bottom: calc(8px + env(safe-area-inset-bottom));
+		padding: 10px 24px;
+		gap: 56px; /* Generous spacing between the two icons */
+		border-radius: 999px; /* Pill shape */
 		z-index: 1000;
-		box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 	}
 
 	.nav-item {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 4px;
+		gap: 6px;
 		color: var(--text-2, #9ca3af);
 		text-decoration: none;
 		font-size: 0.75rem;
-		transition: color 0.2s;
-		width: 33.33%;
+		font-weight: 500;
+		transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+		min-width: 64px;
 	}
 
 	.nav-item:hover {
 		color: var(--text-1, #f3f4f6);
+		transform: translateY(-2px);
 	}
 
 	.nav-item.active {
