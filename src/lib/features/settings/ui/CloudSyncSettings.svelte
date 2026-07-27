@@ -353,6 +353,7 @@
 			onclick={(e) => e.stopPropagation()}
 			role="alertdialog"
 			aria-modal="true"
+			tabindex="-1"
 		>
 			<h3>Ngắt kết nối Cloud Sync?</h3>
 			<p>Dữ liệu trên Google Drive sẽ bị <strong>xóa ngay lập tức</strong>.</p>

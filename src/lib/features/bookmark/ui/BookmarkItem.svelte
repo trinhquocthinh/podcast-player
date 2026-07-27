@@ -1,5 +1,6 @@
 <script lang="ts">
-	import type { Bookmark } from '$lib/core/db';
+	import type { Bookmark, Track, Podcast } from '$lib/core/db';
+	import BookmarkShareModal from './BookmarkShareModal.svelte';
 	import { formatTimestamp } from '$lib/core/utils/time';
 	import { audioEngine } from '$lib/features/playback/infrastructure/engine.svelte';
 	import { player } from '$lib/features/playback/application/player.svelte';
@@ -17,6 +18,10 @@
 	let isEditing = $state(false);
 	let isAiAssistEnabled = $state(false);
 	let isTranscribing = $state(false);
+
+	let isSharing = $state(false);
+	let shareTrack = $state<Track | undefined>(undefined);
+	let sharePodcast = $state<Podcast | undefined>(undefined);
 
 	let aiSub: { unsubscribe: () => void } | undefined;
 
@@ -96,6 +101,24 @@
 			isTranscribing = false;
 		}
 	}
+
+	async function handleShareClick() {
+		try {
+			const t = await db.tracks.get(bookmark.trackId);
+			if (t) {
+				shareTrack = t;
+				if (t.podcastId) {
+					sharePodcast = await db.podcasts.get(t.podcastId);
+				}
+				isSharing = true;
+			} else {
+				toastState.add('error', 'Không tìm thấy thông tin Track');
+			}
+		} catch (e) {
+			console.error(e);
+			toastState.add('error', 'Lỗi khi chuẩn bị chia sẻ');
+		}
+	}
 </script>
 
 <div class="bookmark-item" class:orphaned={bookmark.orphaned}>
@@ -131,6 +154,28 @@
 					{/if}
 				</button>
 			{/if}
+			<button class="icon-btn" onclick={handleShareClick} title="Share">
+				<svg
+					width="16"
+					height="16"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle
+						cx="18"
+						cy="19"
+						r="3"
+					></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line
+						x1="15.41"
+						y1="6.51"
+						x2="8.59"
+						y2="10.49"
+					></line></svg
+				>
+			</button>
 			<button class="icon-btn" onclick={() => (isEditing = !isEditing)} title="Edit Note">
 				<svg
 					width="16"
@@ -176,6 +221,15 @@
 				>Add a note</button
 			>
 		</div>
+	{/if}
+
+	{#if isSharing && shareTrack}
+		<BookmarkShareModal
+			{bookmark}
+			track={shareTrack}
+			podcast={sharePodcast}
+			onclose={() => (isSharing = false)}
+		/>
 	{/if}
 </div>
 

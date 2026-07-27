@@ -55,6 +55,7 @@
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="passphrase-title"
+			tabindex="-1"
 		>
 			<h2 id="passphrase-title">
 				{mode === 'setup' ? 'Tạo Passphrase mã hóa' : 'Nhập Passphrase'}
